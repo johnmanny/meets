@@ -75,8 +75,9 @@ def choose():
     if request.method == 'POST':
         calendarids = request.form.getlist('calendar')
 
-        #grab summaries for each calendar id to output as header of events per calendar(in separate module file)     
+        #grab summaries for each calendar id to output as header of events per cal (first project)
         calsummaries = getSummaries(calendarids, flask.g.calendars)
+        flask.g.calSums = calsummaries
 
         #create events
         events = getEvents(calendarids, calsummaries, credentials, gcal_service)
@@ -91,8 +92,15 @@ def choose():
         """
         # populate agenda with consolidated events
         daysAgenda = agenda.populateDaysAgenda(daysList, events)
-        flask.g.agenda = agenda.getEventsInRange(daysAgenda, flask.session['begin_time'], flask.session['end_time'])
 
+        # restrict events by timerange in  new list 
+        consolidatedAgenda = agenda.getEventsInRange(daysAgenda, flask.session['begin_time'], flask.session['end_time'])
+
+        # create list of only free times
+        flask.g.free = agenda.getFreeTimes(consolidatedAgenda)
+
+        app.logger.debug(calendarids)
+        app.logger.debug(calsummaries)
     return render_template('index.html')
 
 ###

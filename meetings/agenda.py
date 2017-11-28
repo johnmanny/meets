@@ -31,6 +31,16 @@ def getDayList(beginDate, endDate):
     return daysList
 
 ###############################
+# make list of only freetimes
+def getFreeTimes(daysAgenda):
+    for day in daysAgenda:
+        for index, block in enumerate(day['agenda']):
+            if block.type is 'event':
+                del day['agenda'][index]
+
+    return daysAgenda
+
+###############################
 # get events between timerange
 def getEventsInRange(daysAgenda, begin, end):
     beginTime = arrow.get(begin)

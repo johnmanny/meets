@@ -20,7 +20,7 @@
 <body>
 
 <div class="container">
-<h1>Calendar Event times</h1>
+<h1>Matching Meeting Times</h1>
 <p> Select range, then calendars you wish to list events of, then range again, and so on forever and ever.</p><br />
 
 {% with messages = get_flashed_messages() %}
@@ -82,7 +82,12 @@
       {% for cal in g.calendars if cal.selected %}
         <div class="row">
           <div class="col-md-7">
-            <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}}">
+            <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}}"
+              {% if g.calSums is defined and cal.summary in g.calSums %}
+               checked >
+              {% else %}
+                >
+            {% endif %}
             {{ cal.summary }}
           </div>
         </div>
@@ -113,9 +118,9 @@
 {% endif %}
 
 <!-- outputting agenda of events/freetimes -->
-{% if g.agenda is defined %}
+{% if g.free is defined %}
   <div class="row">
-  {% for day in g.agenda %}
+  {% for day in g.free %}
     <div class="col-md-2">
       <div class="row" style="border-style: solid">
         {{ day["start"] | fmtdate }}
