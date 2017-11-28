@@ -21,7 +21,8 @@ import httplib2
 # Google API for services 
 from apiclient import discovery
 
-import timeblock
+import times
+import agenda
 
 ###
 # Globals
@@ -82,15 +83,15 @@ def choose():
         flask.g.events = events
 
         # create list of days
-        daysList = timeblock.getDayList(flask.session['begin_date'], flask.session['end_date'])
+        daysList = agenda.getDayList(flask.session['begin_date'], flask.session['end_date'])
 
         """
         # populate dict of daysAgenda by calendar summary
         daysAgendaByCal = timeblock.populateDaysAgendaByCal(daysList, events)
         """
         # populate agenda with consolidated events
-        daysAgenda = timeblock.populateDaysAgenda(daysList, events)
-        flask.g.agenda = timeblock.getEventsInRange(daysAgenda, flask.session['begin_time'], flask.session['end_time'])
+        daysAgenda = agenda.populateDaysAgenda(daysList, events)
+        flask.g.agenda = agenda.getEventsInRange(daysAgenda, flask.session['begin_time'], flask.session['end_time'])
 
     return render_template('index.html')
 
@@ -124,10 +125,10 @@ def getEvents(calid, calsum, credentials, service):
                     summ = event['summary']
                 else:
                     summ = 'no title'
-                eventclass = timeblock.timeblock(start, end, 'event', summ)
+                eventclass = times.timeblock(start, end, 'event', summ)
                 
                 # to split events if they include multiple days
-                passedEvent = timeblock.fixEventTimes(eventclass)
+                passedEvent = agenda.fixEventTimes(eventclass)
                 try:
                     for aEvent in passedEvent:
                         eventclasslist.append(aEvent)
@@ -243,8 +244,8 @@ def init_session_values():
         tomorrow.format("MM/DD/YYYY"),
         nextweek.format("MM/DD/YYYY"))
     # Default time span each day, 8 to 5
-    #flask.session["begin_time"] = interpret_time("9am")
-    #flask.session["end_time"] = interpret_time("5pm")
+    flask.session["begin_time"] = interpret_time("9am")
+    flask.session["end_time"] = interpret_time("5pm")
 
 def interpret_time( text ):
     """
