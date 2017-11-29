@@ -23,6 +23,7 @@ from apiclient import discovery
 
 import times
 import agenda
+import db
 
 ###
 # Globals
@@ -72,36 +73,65 @@ def choose():
     flask.g.calendars = list_calendars(gcal_service)
 
     #request is from submission of selected calendars
-    if request.method == 'POST':
+    if request.method == 'POST' and 'calchoose' in request.form:
         calendarids = request.form.getlist('calendar')
+        if not calendarids:
+            flask.flash('no calendars selected!')
+            return render_template('index.html')
 
-        #grab summaries for each calendar id to output as header of events per cal (first project)
+        # grab cal summaries for checkbox persistence
         calsummaries = getSummaries(calendarids, flask.g.calendars)
-        flask.g.calSums = calsummaries
+        flask.session['calsumms'] = calsummaries
 
-        #create events
+        # get list of events
         events = getEvents(calendarids, calsummaries, credentials, gcal_service)
-        flask.g.events = events
+        #flask.g.events = events
 
-        # create list of days
+        # create list of days (contains 24hrs of freetime initially)
         daysList = agenda.getDayList(flask.session['begin_date'], flask.session['end_date'])
 
         """
         # populate dict of daysAgenda by calendar summary
         daysAgendaByCal = timeblock.populateDaysAgendaByCal(daysList, events)
         """
-        # populate agenda with consolidated events
+        # populate agenda with events (and split/modify freetimes)
         daysAgenda = agenda.populateDaysAgenda(daysList, events)
 
-        # restrict events by timerange in  new list 
-        consolidatedAgenda = agenda.getEventsInRange(daysAgenda, flask.session['begin_time'], flask.session['end_time'])
+        # restrict blocks by timerange in new list 
+        rangedAgenda = agenda.getEventsInRange(daysAgenda, flask.session['begin_time'], flask.session['end_time'])
 
         # create list of only free times
-        flask.g.free = agenda.getFreeTimes(consolidatedAgenda)
-
-        app.logger.debug(calendarids)
-        app.logger.debug(calsummaries)
+        flask.g.free = agenda.getFreeTimes(rangedAgenda)
+    # freetime selected and submitted
+    elif request.method == 'POST' and 'ftchoose' in request.form:
+        times = request.form['freetimechosen']
+        times = times.split(',')
+        flask.g.date = arrow.get(times[0]).format('YYYY-MM-DD')
+        flask.g.start = times[0]
+        flask.g.end = times[1]
+    
     return render_template('index.html')
+
+
+# create record of new event
+@app.route("/create", methods=['POST'])
+def create():
+    starttime = request.form['timestart']
+    endtime = request.form['timeend']
+    title = request.form['title']
+    desc = request.form['description']
+    date = request.form['date']
+
+    if not title or not desc or not starttime or not endtime or not date:
+        flask.flash("one of 5 required fields left empty! (times, date, title, and description")
+    else:
+        start = arrow.get(date + ' ' + starttime).isoformat()
+        end = arrow.get(date + ' ' + endtime).isoformat() 
+        db.enterinDB(title, desc, start, end)
+
+ 
+    #return render_template('index.html')
+    return flask.redirect(flask.url_for("choose"))
 
 ###
 # ADDED FUNCTION:
@@ -377,6 +407,15 @@ def format_arrow_time( time ):
         return normal.format("HH:mm")
     except:
         return "(bad time)"
+
+@app.template_filter('fmtfreetime')
+def format_free_time(time):
+    try:
+        freetime = arrow.get(time)
+        return freetime.format('h:mm a')
+    except:
+        return "(bad time)"
+ 
     
 #############
 

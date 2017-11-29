@@ -33,12 +33,20 @@ def getDayList(beginDate, endDate):
 ###############################
 # make list of only freetimes
 def getFreeTimes(daysAgenda):
-    for day in daysAgenda:
-        for index, block in enumerate(day['agenda']):
-            if block.type is 'event':
-                del day['agenda'][index]
+    
+    freeAgenda = []
 
-    return daysAgenda
+    for day in daysAgenda:
+        newDay = {}
+        newDay['start'] = day['start']
+        newDay['end'] = day['end']
+        newDay['agenda'] = []
+        for block in day['agenda']:
+            if block.type is 'free':
+                newDay['agenda'].append(block)
+        freeAgenda.append(newDay)
+    
+    return freeAgenda
 
 ###############################
 # get events between timerange
