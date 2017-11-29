@@ -71,21 +71,21 @@ def choose():
     gcal_service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
     flask.g.calendars = list_calendars(gcal_service)
-
+    app.logger.debug(flask.g.calendars)
+    
     #request is from submission of selected calendars
     if request.method == 'POST' and 'calchoose' in request.form:
-        calendarids = request.form.getlist('calendar')
-        if not calendarids:
+        calendars = request.form.getlist('calendar')
+        if not calendars:
             flask.flash('no calendars selected!')
             return render_template('index.html')
 
-        # grab cal summaries for checkbox persistence
-        calsummaries = getSummaries(calendarids, flask.g.calendars)
-        flask.session['calsumms'] = calsummaries
-
+        # get selected cals
+        flask.session['selected'] = getSelected(calendars)
+        # get selected cal summaries and ids
+        calsummaries, calendarids = getIdsAndSums(flask.session['selected'])
         # get list of events
         events = getEvents(calendarids, calsummaries, credentials, gcal_service)
-        #flask.g.events = events
 
         # create list of days (contains 24hrs of freetime initially)
         daysList = agenda.getDayList(flask.session['begin_date'], flask.session['end_date'])
@@ -109,6 +109,10 @@ def choose():
         flask.g.date = arrow.get(times[0]).format('YYYY-MM-DD')
         flask.g.start = times[0]
         flask.g.end = times[1]
+        #flask.g.
+        #for cals in flask.g.calendars:
+        #   for calSums in flask.session['calsumms']:
+        #       if calSums in cals[ 
     
     return render_template('index.html')
 
@@ -119,8 +123,10 @@ def create():
     starttime = request.form['timestart']
     endtime = request.form['timeend']
     title = request.form['title']
-    desc = request.form['description']
     date = request.form['date']
+    desc = request.form['description']
+    owner = request.form['owner']
+    invitees = request.getlist('calendar')
 
     if not title or not desc or not starttime or not endtime or not date:
         flask.flash("one of 5 required fields left empty! (times, date, title, and description")
@@ -178,14 +184,42 @@ def getEvents(calid, calsum, credentials, service):
     return eventsbycalendar
 
 # ADDED FUNCTION:
-# get summaries of calendar from object dict
-def getSummaries(calendarid, calendardict):
+# split ids and summaries and return two lists
+def getSelected(calendars):
+    app.logger.debug('DEBUG CALENDARS IN GET SELECTED')
+    app.logger.debug(calendars)
+    # calsdict format = {'longcalendarid': 'calendarsummary', 'longcalid2': 'calsum2', ... } 
+    calsdict = {} 
+    calinfo = []
+    for cal in calendars:
+       calparts = []
+       calinfo = []
+       calparts = cal.split(',')
+       calinfo.append(calparts[1])
+       calinfo.append(calparts[2])
+       calsdict[calparts[0]] = calinfo
+    """
     calsummaries = []
     for ids in calendarid:
         for calendars in calendardict:
             if ids in calendars['id']:
                 calsummaries.append(calendars['summary'])
-    return calsummaries
+    """
+    app.logger.debug("Debug calsdict in getSelected")
+    app.logger.debug(calsdict)
+    return calsdict
+
+# get summaries
+def getIdsAndSums(calsdict):
+    calsums = []
+    calids = []
+    for ids, info in calsdict.items():
+        calsums.append(info[0])
+        calids.append(ids)
+        
+    app.logger.debug(calsums)
+    app.logger.debug(calids)
+    return calsums, calids
 
 ###
 # google credential and service object functions
@@ -357,13 +391,16 @@ def list_calendars(service):
         # Optional binary attributes with False as default
         selected = ("selected" in cal) and cal["selected"]
         primary = ("primary" in cal) and cal["primary"]
-
+        # attributes to determine if owner of calendar
+        accessrole = cal["accessRole"]
+        
         result.append(
           { "kind": kind,
             "id": id,
             "summary": summary,
             "selected": selected,
-            "primary": primary
+            "primary": primary,
+            "accessrole": accessrole
             })
         app.logger.debug("Leaving list_calendars")
     return sorted(result, key=cal_sort_key)

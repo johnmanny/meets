@@ -103,8 +103,8 @@
       {% for cal in g.calendars if cal.selected %}
         <div class="row">
           <div class="col-md-6">
-            <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}}"
-              {% if session.calsumms is defined and cal.summary in session.calsumms %}
+            <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}},{{cal.summary}},{{cal.accessrole}}"
+              {% if session.selected is defined and cal.id in session.selected %}
                checked >
               {% else %}
                 >
@@ -170,6 +170,21 @@
 {% if g.date is defined %}
   <h2>Enter Meeting Info:</h2><br />
   <form id="createmeeting" method="POST" action="/create">
+    Select Calender to set as Owner of Event:<br />
+    <div class="row">
+    {% for calid, calinfo, role in session.selected.items() %}
+      {% for calsum, calrole in calinfo %}
+        {% if calrole == "owner" %}
+          <div class="col-md-2">
+            <label class="radio-inline">
+              <input type="radio" name="eventowner" value="{{calid}}">
+                {{ calsum }}
+            </label>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+    </div>
     <div class="row">
         <input type=date name="date" value="{{ g.date }}">
       </label>
