@@ -172,18 +172,18 @@
   <form id="createmeeting" method="POST" action="/create">
     Select Calender to set as Owner of Event:<br />
     <div class="row">
-    {% for calid, calinfo, role in session.selected.items() %}
-      {% for calsum, calrole in calinfo %}
-        {% if calrole == "owner" %}
-          <div class="col-md-2">
+    <div class="col-md-2">
+    {% for calid, calinfo in session.selected.items() %}
+        {% if calinfo[1] == "owner" %}
+          <div class="row">
             <label class="radio-inline">
               <input type="radio" name="eventowner" value="{{calid}}">
-                {{ calsum }}
+                {{ calinfo[0] }}
             </label>
           </div>
         {% endif %}
-      {% endfor %}
     {% endfor %}
+    </div>
     </div>
     <div class="row">
         <input type=date name="date" value="{{ g.date }}">

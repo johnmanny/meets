@@ -125,8 +125,15 @@ def create():
     title = request.form['title']
     date = request.form['date']
     desc = request.form['description']
-    owner = request.form['owner']
-    invitees = request.getlist('calendar')
+    owner = request.form['eventowner']
+    invitees = []
+    for calid, items in flask.session['selected']:
+        if calid is not owner:
+            invitees.append(calid)
+
+    app.logger.debug("DEBUGGING EVENTINVITEES")
+    app.logger.debug(invitees)
+    
 
     if not title or not desc or not starttime or not endtime or not date:
         flask.flash("one of 5 required fields left empty! (times, date, title, and description")
@@ -198,15 +205,7 @@ def getSelected(calendars):
        calinfo.append(calparts[1])
        calinfo.append(calparts[2])
        calsdict[calparts[0]] = calinfo
-    """
-    calsummaries = []
-    for ids in calendarid:
-        for calendars in calendardict:
-            if ids in calendars['id']:
-                calsummaries.append(calendars['summary'])
-    """
-    app.logger.debug("Debug calsdict in getSelected")
-    app.logger.debug(calsdict)
+
     return calsdict
 
 # get summaries
