@@ -33,7 +33,7 @@ except:
 # database functions accessed by flask_main
 
 #func to enter in DB
-def enterinDB(title, desc, start, end, owner, invitees):
+def enterinDB(title, desc, start, end, ownerid, ownersum, invitees):
     rejected = []
     accepted = []
     newmeeting  = { "type": "meeting",
@@ -41,7 +41,8 @@ def enterinDB(title, desc, start, end, owner, invitees):
                     "desc": desc,
                     "start": start,
                     "end": end,
-                    "owner": owner,
+                    "owner": ownerid,
+                    "ownersummary": ownersum,
                     "invitees": invitees
                   }
     collection.insert_one(newmeeting)

@@ -55,7 +55,7 @@ def index():
     init_session_values()
   return render_template('index.html')
 
-###############
+#####
 # huge choose route that deals constantly with valid credentials
 #   and auth routing. all input to webpage goes through here and
 #   if request method is post, grab eventlist.
@@ -118,7 +118,7 @@ def choose():
     
     return render_template('index.html')
 
-########
+###
 # create record of new event
 @app.route("/create", methods=['POST'])
 def create():
@@ -128,6 +128,7 @@ def create():
     date = request.form['date']
     desc = request.form['description']
     owner = request.form['eventowner']
+    ownerparts= owner.split(',')
     invitees = []
      
     # place selected calendars into invitee list if isn't selected owner calendar
@@ -145,12 +146,17 @@ def create():
     else:
         start = arrow.get(date + ' ' + starttime).replace(tzinfo=tz.tzlocal()).isoformat()
         end = arrow.get(date + ' ' + endtime).replace(tzinfo=tz.tzlocal()).isoformat() 
-        db.enterinDB(title, desc, start, end, owner, invitees)
+        db.enterinDB(title, desc, start, end, ownerparts[0], ownerparts[1], invitees)
         flask.flash("event invite successfully created!")
  
     return flask.redirect(flask.url_for("choose"))
 
-########
+###
+# route for verification
+@app.route("/verify/<key>")
+def verify(key): pass
+
+#####
 # display meetings proposed by owner of meetings
 @app.route("/meetings", methods=['POST'])
 def meetings():
@@ -160,8 +166,12 @@ def meetings():
     sumAndRoleById = getCalsFromHTML(calinfo)
     meetinglist = db.getMeetings()
     flask.g.meetings = db.getOwnedMeetings(meetinglist, sumAndRoleById)
+    for meeting in flask.g.meetings:
+        for invitees in meeting['invitees']:
+              print ('PRINTING URL:')
+              print (url_for('verify', key=invitees['id']))
+              print ('-----------------------------------------')
     return render_template('meetings.html')
-
 
 ##################################################
 # Get events, to get events from calendars chosen in template

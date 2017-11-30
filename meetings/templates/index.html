@@ -177,6 +177,7 @@
         </div>
       {% endfor %}
     </div>
+  <br />
   <div class="row">
     <input type="submit" name="ftchoose" value="Choose Free Time" />
   </div>
@@ -192,7 +193,7 @@
     <div class="col-md-2">
     {% for calid, calinfo in session.selected.items() %}
         {% if calinfo[1] == "owner" %}
-              <input type="radio" name="eventowner" value="{{calid}}">
+              <input type="radio" name="eventowner" value="{{calid}},{{calinfo[0]}}">
                 {{ calinfo[0] }}
                 <br />
         {% endif %}
