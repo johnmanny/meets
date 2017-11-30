@@ -55,7 +55,7 @@ def index():
     init_session_values()
   return render_template('index.html')
 
-#######
+###############
 # huge choose route that deals constantly with valid credentials
 #   and auth routing. all input to webpage goes through here and
 #   if request method is post, grab eventlist.
@@ -71,9 +71,15 @@ def choose():
     gcal_service = get_gcal_service(credentials)
     app.logger.debug("Returned from get_gcal_service")
     flask.g.calendars = list_calendars(gcal_service)
-    app.logger.debug(flask.g.calendars)
     
-    #request is from submission of selected calendars
+    # get list of owners from database for button check of created invites
+    meetings = db.getMeetings()
+    ownerlist = db.getOwners(meetings)
+
+    # to check if should put 'list' button in template
+    flask.g.isowner = db.checkIsOwner(ownerlist, flask.g.calendars)
+
+    # request method is post and button pressed is to choose calendars
     if request.method == 'POST' and 'calchoose' in request.form:
         calendars = request.form.getlist('calendar')
         if not calendars:
@@ -81,7 +87,7 @@ def choose():
             return render_template('index.html')
 
         # get selected cals
-        flask.session['selected'] = getSelected(calendars)
+        flask.session['selected'] = getCalsFromHTML(calendars)
         # get selected cal summaries and ids
         calsummaries, calendarids = getIdsAndSums(flask.session['selected'])
         # get list of events
@@ -90,10 +96,6 @@ def choose():
         # create list of days (contains 24hrs of freetime initially)
         daysList = agenda.getDayList(flask.session['begin_date'], flask.session['end_date'])
 
-        """
-        # populate dict of daysAgenda by calendar summary
-        daysAgendaByCal = timeblock.populateDaysAgendaByCal(daysList, events)
-        """
         # populate agenda with events (and split/modify freetimes)
         daysAgenda = agenda.populateDaysAgenda(daysList, events)
 
@@ -102,21 +104,21 @@ def choose():
 
         # create list of only free times
         flask.g.free = agenda.getFreeTimes(rangedAgenda)
-    # freetime selected and submitted
+    # request method is post and button pressed is to choose freetime
     elif request.method == 'POST' and 'ftchoose' in request.form:
+        print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
+        if 'freetimechosen' not in request.form:
+            flask.flash("no freetime chosen!")
+            return render_template('index.html')
         times = request.form['freetimechosen']
         times = times.split(',')
         flask.g.date = arrow.get(times[0]).format('YYYY-MM-DD')
         flask.g.start = times[0]
         flask.g.end = times[1]
-        #flask.g.
-        #for cals in flask.g.calendars:
-        #   for calSums in flask.session['calsumms']:
-        #       if calSums in cals[ 
     
     return render_template('index.html')
 
-
+########
 # create record of new event
 @app.route("/create", methods=['POST'])
 def create():
@@ -127,28 +129,42 @@ def create():
     desc = request.form['description']
     owner = request.form['eventowner']
     invitees = []
-    for calid, items in flask.session['selected']:
-        if calid is not owner:
-            invitees.append(calid)
+     
+    # place selected calendars into invitee list if isn't selected owner calendar
+    for calid, items in flask.session['selected'].items():
+        if items[1] != 'owner':
+            cal = {}
+            cal['id'] = calid
+            cal['status'] = 'pending'
+            cal['summary'] = items[0]
+            invitees.append(cal)
 
-    app.logger.debug("DEBUGGING EVENTINVITEES")
-    app.logger.debug(invitees)
-    
-
+    # error check for unfilled, required fields
     if not title or not desc or not starttime or not endtime or not date:
         flask.flash("one of 5 required fields left empty! (times, date, title, and description")
     else:
-        start = arrow.get(date + ' ' + starttime).isoformat()
-        end = arrow.get(date + ' ' + endtime).isoformat() 
-        db.enterinDB(title, desc, start, end)
-
+        start = arrow.get(date + ' ' + starttime).replace(tzinfo=tz.tzlocal()).isoformat()
+        end = arrow.get(date + ' ' + endtime).replace(tzinfo=tz.tzlocal()).isoformat() 
+        db.enterinDB(title, desc, start, end, owner, invitees)
+        flask.flash("event invite successfully created!")
  
-    #return render_template('index.html')
     return flask.redirect(flask.url_for("choose"))
 
-###
-# ADDED FUNCTION:
-# get events, to get events from calendars chosen in template
+########
+# display meetings proposed by owner of meetings
+@app.route("/meetings", methods=['POST'])
+def meetings():
+    app.logger.debug("Entering meetings route")
+    # get calendar list data from HTML form
+    calinfo = request.form.getlist('calinfo')
+    sumAndRoleById = getCalsFromHTML(calinfo)
+    meetinglist = db.getMeetings()
+    flask.g.meetings = db.getOwnedMeetings(meetinglist, sumAndRoleById)
+    return render_template('meetings.html')
+
+
+##################################################
+# Get events, to get events from calendars chosen in template
 ###
 def getEvents(calid, calsum, credentials, service):
     app.logger.debug("Entering getEvents")
@@ -190,12 +206,15 @@ def getEvents(calid, calsum, credentials, service):
         app.logger.debug("Leaving getEvents")
     return eventsbycalendar
 
-# ADDED FUNCTION:
-# split ids and summaries and return two lists
-def getSelected(calendars):
-    app.logger.debug('DEBUG CALENDARS IN GET SELECTED')
-    app.logger.debug(calendars)
-    # calsdict format = {'longcalendarid': 'calendarsummary', 'longcalid2': 'calsum2', ... } 
+##
+# create dict of selected cals for storing in session 
+def getCalsFromHTML(calendars):
+    ##
+    # Calsdict layout: 
+    # calsdict = {'longcalendarid': ['calendarsummary', 'owner/reader/etc'],
+    #             'longcalid2': ['calsum2', 'owner2/reader2/etc],
+    #             ... 
+    #            } 
     calsdict = {} 
     calinfo = []
     for cal in calendars:
@@ -208,7 +227,10 @@ def getSelected(calendars):
 
     return calsdict
 
-# get summaries
+##
+# Split summaries and ids of selected cals to different lists
+#   to keep compatability with current implementation.
+#   Will eventually need refactoring.
 def getIdsAndSums(calsdict):
     calsums = []
     calids = []
@@ -281,8 +303,8 @@ def setrange():
     widget.
     """
     app.logger.debug("Entering setrange")  
-    flask.flash("Setrange gave us '{}'".format(
-      request.form.get('daterange')))
+    #flask.flash("Setrange gave us '{}'".format(
+    #  request.form.get('daterange')))
     daterange = request.form.get('daterange')
     flask.session['daterange'] = daterange
     daterange_parts = daterange.split()
@@ -432,7 +454,7 @@ def cal_sort_key( cal ):
 def format_arrow_date( date ):
     try: 
         normal = arrow.get( date )
-        return normal.format("ddd MM/DD")
+        return normal.format("ddd MM/DD/YY")
     except:
         return "(bad date)"
 

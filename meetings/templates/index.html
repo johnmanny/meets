@@ -20,18 +20,8 @@
 <body>
 
 <div class="container">
-<h1>Matching Meeting Times</h1>
-<p> Find a free time to setup a meeting between multiple people using thier google calendars!</p><br />
-
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <ul class=flashes>
-    {% for message in messages %}
-      <li>{{ message }}</li>
-    {% endfor %}
-    </ul>
-  {% endif %}
-{% endwith %}
+<h1 class="text-center">Matching Meeting Times</h1>
+<p class="text-center"> Find a free time to setup a meeting between multiple people using thier google calendars!</p><br />
 
 <h2>Date/Time Range</h2>
   <div class="row">
@@ -100,9 +90,9 @@
     <h3>Check calendars to find free time available between them:</h3>
   {% endif %}
   <form id="calchoose" method="POST" action="/choose">
-      {% for cal in g.calendars if cal.selected %}
         <div class="row">
-          <div class="col-md-6">
+          <div class="col-md-3">
+      {% for cal in g.calendars if cal.selected %}
             <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}},{{cal.summary}},{{cal.accessrole}}"
               {% if session.selected is defined and cal.id in session.selected %}
                checked >
@@ -110,11 +100,15 @@
                 >
             {% endif %}
             {{ cal.summary }}
+            <br />
+        {% if loop.index is divisibleby 4 %}
+          </div><div class="col-md-3">
+        {% endif %}
+      {% endfor %}
           </div>
         </div>
-      {% endfor %}
       <div class="row">
-        <div class="col-md-7">
+        <div class="col-md-4">
           <label><input type="checkbox" name="checkall" id="checkall">Check all Calendars</label>
           <script>
           $(document).ready(function(){
@@ -134,9 +128,32 @@
           </script>
         </div>
       </div>
-  <button type=submit name="calchoose">Select Calendars</button>
+  <div class="row">
+      <button type=submit name="calchoose">Show Freetimes</button>
+  </div>
   </form>
+  {% if g.isowner == True %}
+    <form id="listmeetings" method="POST" action="/meetings">
+      <div class="row">
+        <button type=submit name="showmeetings">List Your Proposed Meetings</button>
+        {% for cal in g.calendars %} 
+          <input type="hidden" name="calinfo" value="{{cal.id}},{{cal.summary}},{{cal.accessrole}}">
+        {% endfor %}
+      </div> 
+   </form>
+  {% endif %}
 {% endif %}
+
+<!-- flash flask messages for errors/notifications -->
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <ul class=flashes>
+    {% for message in messages %}
+      <li>{{ message }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
 
 <!-- outputting agenda of events/freetimes -->
 {% if g.free is defined %}
@@ -175,12 +192,9 @@
     <div class="col-md-2">
     {% for calid, calinfo in session.selected.items() %}
         {% if calinfo[1] == "owner" %}
-          <div class="row">
-            <label class="radio-inline">
               <input type="radio" name="eventowner" value="{{calid}}">
                 {{ calinfo[0] }}
-            </label>
-          </div>
+                <br />
         {% endif %}
     {% endfor %}
     </div>
