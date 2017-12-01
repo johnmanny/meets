@@ -24,6 +24,8 @@ from apiclient import discovery
 import times
 import agenda
 import db
+import email.mime.text
+import base64
 
 ###
 # Globals
@@ -39,7 +41,7 @@ app.debug=CONFIG.DEBUG
 app.logger.setLevel(logging.DEBUG)
 app.secret_key=CONFIG.SECRET_KEY
 
-SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.send']
 CLIENT_SECRET_FILE = CONFIG.GOOGLE_KEY_FILE  ## You'll need this
 APPLICATION_NAME = 'MeetMe class project'
 
@@ -159,6 +161,15 @@ def create():
         db.enterinDB(title, desc, start, end, ownerparts[0], ownerparts[1], invitees)
         flask.flash("event invite successfully created!")
  
+    
+    credentials = valid_credentials()
+    if not credentials:
+      app.logger.debug("Redirecting to authorization")
+      return flask.redirect(flask.url_for('oauth2callback'))
+    result = get_gmail_service(credentials)
+    send_message(result)
+
+
     return flask.redirect(flask.url_for("choose"))
 
 ########
@@ -283,20 +294,69 @@ def getOwnedCals(cals):
     return newcals
 
 """
-###################### google credential and service object functions
+############################################## google credential and service object functions
 """
+# retrieve the service object for google calendar
+def get_gmail_service(credentials):
+  app.logger.debug("Entering get_gmail_service")
+  http_auth = credentials.authorize(httplib2.Http())
+  service = discovery.build('gmail', 'v1', http=http_auth)
+  app.logger.debug("Returning service")
+  return service
 
+def create_message():
+  """Create a message for an email.
+
+  Args:
+    sender: Email address of the sender.
+    to: Email address of the receiver.
+    subject: The subject of the email message.
+    message_text: The text of the email message.
+
+  Returns:
+    An object containing a base64url encoded email object.
+  """
+  message_text = 'DUDE YOU WILL NEVER GUESS WUT HAPPENED'
+  message = email.mime.text.MIMEText(message_text)
+  message['to'] = 'oowea@yahoo.com'
+  message['from'] = 'ooowea@gmail.com'
+  message['subject'] = 'dudddddddddddddde'
+  message = base64.urlsafe_b64encode(message.as_bytes())
+  message = message.decode()
+  return {'raw': message} 
+
+def send_message(service):
+  """Send an email message.
+
+  Args:
+    service: Authorized Gmail API service instance.
+    user_id: User's email address. The special value "me"
+    can be used to indicate the authenticated user.
+    message: Message to be sent.
+
+  Returns:
+    Sent Message.
+  """
+  theemail = create_message()
+  try:
+    user_id = 'ooowea@gmail.com'
+    message = (service.users().messages().send(userId=user_id, body=theemail)
+               .execute())
+    print ('Message Id: %s' % message['id'])
+    return message
+  except httplib2.HttpLib2Error:
+    print ('An error occurred: %s' % error)
+
+########################################################################calendar ones
 #checks for valid credentials
 def valid_credentials():
    
     # will eventually redirect to oauth2callback
     if 'credentials' not in flask.session:
       return None
-    
     # will convert
     credentials = client.OAuth2Credentials.from_json(
         flask.session['credentials'])
-    
     if (credentials.invalid or
         credentials.access_token_expired):
       return None
