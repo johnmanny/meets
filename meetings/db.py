@@ -43,7 +43,8 @@ def enterinDB(title, desc, start, end, ownerid, ownersum, invitees):
                     "end": end,
                     "owner": ownerid,
                     "ownersummary": ownersum,
-                    "invitees": invitees
+                    "invitees": invitees,
+                    "status": 'pending'
                   }
     collection.insert_one(newmeeting)
 
@@ -51,6 +52,15 @@ def enterinDB(title, desc, start, end, ownerid, ownersum, invitees):
 def removefromDB(datetime):
     memodate = arrow.get(datetime).naive
     collection.delete_one({ "date": memodate})
+
+# check if meeting is confirmed (all invites approved)
+def checkMeetingConfirm(idsDict):
+    meeting = collection.find_one({ '_id': ObjectId(idsDict['meetID']) })
+
+    if meeting['status'] == 'pending':
+        if all(invitee['status'] == 'accepted' for invitee in meeting['invitees']):
+            meeting['status'] = 'confirmed'
+    collection.save(meeting)
 
 # modify status of invitee to accepted or rejected
 def modifyStatus(idsDict, changeto):

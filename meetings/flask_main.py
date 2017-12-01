@@ -20,12 +20,15 @@ from oauth2client import client
 import httplib2
 # Google API for services 
 from apiclient import discovery
+# used for email
+import email.mime.text
+import base64
 
+# created modules
 import times
 import agenda
 import db
-import email.mime.text
-import base64
+import calfuncs
 
 ###
 # Globals
@@ -80,7 +83,7 @@ def choose():
     #ownerlist = db.getOwners(meetings)
     
     # get list of cals that are owned by user
-    flask.g.ownedcals = getOwnedCals(flask.g.calendars)
+    flask.g.ownedcals = calfuncs.getOwnedCals(flask.g.calendars)
     
     # to check if user is owner of any created meetings
     flask.g.isowner = db.checkIsOwner(flask.g.ownedcals)
@@ -96,9 +99,9 @@ def choose():
             return render_template('index.html')
 
         # get selected cals
-        flask.session['selected'] = getSelectedCals(calendars)
+        flask.session['selected'] = calfuncs.getSelectedCals(calendars)
         # get selected cal summaries and ids
-        calsummaries, calendarids = getIdsAndSums(flask.session['selected'])
+        calsummaries, calendarids = calfuncs.getIdsAndSums(flask.session['selected'])
         
         # get list of events
         events = getEvents(calendarids, calsummaries, credentials, gcal_service)
@@ -160,15 +163,14 @@ def create():
         end = arrow.get(date + ' ' + endtime).replace(tzinfo=tz.tzlocal()).isoformat() 
         db.enterinDB(title, desc, start, end, ownerparts[0], ownerparts[1], invitees)
         flask.flash("event invite successfully created!")
- 
     
+ 
     credentials = valid_credentials()
     if not credentials:
-      app.logger.debug("Redirecting to authorization")
-      return flask.redirect(flask.url_for('oauth2callback'))
+        app.logger.debug("Redirecting to authorization")
+        return flask.redirect(flask.url_for('oauth2callback'))
     result = get_gmail_service(credentials)
     send_message(result)
-
 
     return flask.redirect(flask.url_for("choose"))
 
@@ -183,9 +185,10 @@ def meetings():
         flask.g.ownedcals = flask.session['ownedcals']
     else:
         calsinfo = request.form.getlist('calsinfo')
-        flask.g.ownedcals = getCalsFromHTML(calsinfo)
+        flask.g.ownedcals = calfuncs.getCalsFromHTML(calsinfo)
         flask.session['ownedcals'] = flask.g.ownedcals
     flask.g.ownedmeetings = db.getOwnedMeetings(flask.g.ownedcals)
+    
     app.logger.debug("Leaving meetings route")
     return render_template('meetings.html')
 
@@ -200,7 +203,7 @@ def invites():
         flask.g.ownedcals = flask.session['ownedcals']
     else:
         calsinfo = request.form.getlist('calsinfo')
-        flask.g.ownedcals = getCalsFromHTML(calsinfo)
+        flask.g.ownedcals = calfuncs.getCalsFromHTML(calsinfo)
         flask.session['ownedcals'] = flask.g.ownedcals
     flask.g.ownedinvites = db.getInvitedMeetings(flask.g.ownedcals)
 
@@ -212,8 +215,12 @@ def invites():
 @app.route("/accept", methods=['POST'])
 def accept():
     app.logger.debug("entering accept route")
-    idsDict = splitIds(request.form.get('accept'))
+    idsDict = calfuncs.splitIds(request.form.get('accept'))
+    # change relevant invite to 'accepted'
     db.modifyStatus(idsDict, 'accepted')
+    # check if all invites 'accepted', changes meeting status to 'confirmed'
+    db.checkMeetingConfirm(idsDict)
+    
     app.logger.debug("exiting accept route")
     return flask.redirect('invites')
     
@@ -222,76 +229,12 @@ def accept():
 @app.route("/reject", methods=['POST'])
 def reject():
     app.logger.debug("enter reject route")
-    idsDict = splitIds(request.form.get('reject'))
+    idsDict = calfuncs.splitIds(request.form.get('reject'))
+    # change relevant invite to 'rejected'
     db.modifyStatus(idsDict, 'rejected')
     app.logger.debug("exit reject route")
     return flask.redirect('invites')
 
-
-####
-# split invitee id and meeting id
-def splitIds(ids):
-    parts = ids.split(',')
-    newIds = { 'inviteID': parts[0],
-               'meetID': parts[1]
-             }
-    return newIds
-
-##
-# create dict of owned cals from HTML
-def getCalsFromHTML(calendars):
-    
-    calsdict = {} 
-    for cal in calendars:
-       calparts = []
-       calparts = cal.split(',')
-       calsdict[calparts[0]] = calparts[1]
-
-    return calsdict
-
-##
-# create dict of selected cals for storing in session 
-def getSelectedCals(calendars):
-    ##
-    # Calsdict layout: 
-    # calsdict = {'longcalendarid':'calendarsummary',
-    #             'longcalid2': 'calsum2', ...
-    #            } 
-    calsdict = {} 
-    for cal in calendars:
-       calparts = []
-       calinfo = []
-       calparts = cal.split(',')
-       calinfo.append(calparts[1])
-       calinfo.append(calparts[2])
-       calsdict[calparts[0]] = calinfo
-
-    return calsdict
-
-##
-# Split summaries and ids of selected cals to different lists
-#   to keep compatability with current implementation.
-#   Will eventually need refactoring.
-def getIdsAndSums(calsdict):
-    calsums = []
-    calids = []
-    for ids, info in calsdict.items():
-        calsums.append(info[0])
-        calids.append(ids)
-        
-    app.logger.debug(calsums)
-    app.logger.debug(calids)
-    return calsums, calids
-
-##
-# get owned calendars from calendarlist
-def getOwnedCals(cals):
-    newcals = []
-    for cal in cals:
-        if cal['accessrole'] == 'owner':
-            newcals.append(cal)
-
-    return newcals
 
 """
 ############################################## google credential and service object functions

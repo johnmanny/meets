@@ -23,46 +23,82 @@
 <h1 class="text-center">Matching Meeting Times</h1>
 <p class="text-center"> Find a free time to setup a meeting between multiple people using thier google calendars!</p><br />
 
-<h2>Date/Time Range</h2>
-  <div class="row">
-    <form action="/setrange" method="post">
-    <input type="text" name="daterange" size="12"
-      {% if session.daterange is defined %}
-           value="{{session.daterange}}"
-      {% endif %}
-       class="pull-down"
-       style="background: #fff; cursor: pointer; padding: 5px 10px;
-       border: 1px solid #ccc; width: 12em" >
-     From:
-     <input type="time" name="timestart" 
-     {% if session.begin_time is defined %}
-         value="{{ session.begin_time | fmttime }}"
-     {% endif %}
-     >
-     To:
-     <input type="time" name="timeend"
-     {% if session.end_time is defined %}
-         value="{{ session.end_time | fmttime }}"
-     {% endif %}
-     >
-  <script type="text/javascript">
-  $(function() {
-  $('input[name="daterange"]').daterangepicker(
-    {    ranges: {
-           'Today': [moment(), moment()],
-           'Tomorrow':[moment().add(1, 'days'),
+<div class="row">
+  <!-- insert button if it is determined user is owner of some created meetings -->
+  {% if g.isowner == True %}
+  <div class="col">
+    <div class="row">
+      <h5>Found Meetings You're Organizing!</h5>
+    </div>
+    <div class="row">
+      <form id="listmeetings" method="POST" action="/meetings">
+        <button type=submit name="showmeetings">List Your Proposed Meetings</button>
+        {% for cal in g.ownedcals %} 
+          <input type="hidden" name="calsinfo" value="{{cal.id}},{{cal.summary}}">
+        {% endfor %}
+      </form> 
+    </div>
+   </div>
+  {% endif %}
+  <!-- insert button if determined user is has invites to meetings pending -->
+  {% if g.isinvited == True %}
+    <div class="col">
+      <div class="row">
+        <h5>You're invited to some meetings!</h5>
+      </div>
+      <div class="row">
+        <form id="listinvited" method="POST" action="/invites">
+          <button type=submit name="showinvited">List Meetings Invited To</button>
+            {% for cal in g.ownedcals %}
+              <input type="hidden" name="calsinfo" value="{{cal.id}},{{cal.summary}}">
+            {% endfor %}
+        </form>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+{% if g.date is not defined %}
+  <h2>Date/Time Range</h2>
+    <div class="row">
+      <form action="/setrange" method="post">
+        <input type="text" name="daterange" size="12"
+        {% if session.daterange is defined %}
+          value="{{session.daterange}}"
+        {% endif %}
+        class="pull-down"
+        style="background: #fff; cursor: pointer; padding: 5px 10px;
+        border: 1px solid #ccc; width: 12em" >
+        From:
+        <input type="time" name="timestart" 
+        {% if session.begin_time is defined %}
+          value="{{ session.begin_time | fmttime }}"
+        {% endif %}
+        >
+        To:
+        <input type="time" name="timeend"
+        {% if session.end_time is defined %}
+          value="{{ session.end_time | fmttime }}"
+        {% endif %}
+        >
+        <script type="text/javascript">
+            $(function() {
+            $('input[name="daterange"]').daterangepicker(
+            {    ranges: {
+               'Today': [moment(), moment()],
+               'Tomorrow':[moment().add(1, 'days'),
                        moment().add(1, 'days')], 
-           'This week':[moment(), moment().endOf('week')],
-           'Next week':[moment().add(7, 'days').startOf('week'),
-                        moment().add(7, 'days').endOf('week')],
-           'This month':[moment(), moment().endOf('month')],
-           'Within two weeks':[moment(),moment().add(15, 'days')]
-        }}
-       );
+               'This week':[moment(), moment().endOf('week')],
+               'Next week':[moment().add(7, 'days').startOf('week'),
+                       moment().add(7, 'days').endOf('week')],
+               'This month':[moment(), moment().endOf('month')],
+               'Within two weeks':[moment(),moment().add(15, 'days')]
+            }}
+        );
     });
-  </script>
-    <input type="checkbox" name="allday" id="allday" value="">Check for All Day
-    <script>
+        </script>
+        <input type="checkbox" name="allday" id="allday" value="">Check for All Day
+        <script>
         $(document).ready(function(){
             $("#allday").click(function(){
                 if(this.checked){
@@ -74,88 +110,66 @@
                 }
             });
         });
-    </script>
-  </div>
-  <div class="row">
-    <input type="submit" value="Set Range" />
-  </div>
-</form>
-
-<!-- create form to pass into /choose -->
-{% if g.calendars is defined %}
-  <br />
-  {% if g.date is defined %}
-    <h3>Meeting invitations will be sent to:</h3>
-  {% else %}
-    <h3>Check calendars to find free time available between them:</h3>
-  {% endif %}
-  <form id="calchoose" method="POST" action="/choose">
+        </script>
+        </div>
         <div class="row">
-          <div class="col-md-3">
-      {% for cal in g.calendars if cal.selected %}
-            <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}},{{cal.summary}},{{cal.accessrole}}"
-              {% if session.selected is defined and cal.id in session.selected %}
-               checked >
-              {% else %}
-                >
-            {% endif %}
-            {{ cal.summary }}
-            <br />
-        {% if loop.index is divisibleby 4 %}
-          </div><div class="col-md-3">
-        {% endif %}
-      {% endfor %}
+          <input type="submit" value="Set Range" />
+        </div>
+      </form>
+<br />
+
+  <!-- create form to pass into /choose -->
+  {% if g.calendars is defined %}
+    {% if g.date is defined %}
+      <h3>Meeting invitations will be sent to:</h3>
+    {% else %}
+      <h3>Check calendars to find free time available between them:</h3>
+    {% endif %}
+    <form id="calchoose" method="POST" action="/choose">
+          <div class="row">
+            <div class="col-md-3">
+        {% for cal in g.calendars if cal.selected %}
+              <input type="checkbox" class="checkboxes" name="calendar" value="{{cal.id}},{{cal.summary}},{{cal.accessrole}}"
+                {% if session.selected is defined and cal.id in session.selected %}
+                 checked >
+                {% else %}
+                  >
+              {% endif %}
+              {{ cal.summary }}
+              <br />
+          {% if loop.index is divisibleby 4 %}
+            </div><div class="col-md-3">
+          {% endif %}
+        {% endfor %}
+            </div>
+          </div>
+        <div class="row">
+          <div class="col-md-4">
+            <label><input type="checkbox" name="checkall" id="checkall">Check all Calendars</label>
+            <script>
+            $(document).ready(function(){
+                $("#checkall").click(function(){
+                    if(this.checked){
+                        $('.checkboxes').each(function(){
+                            this.checked = true;
+                        })
+                    }
+                    else {
+                        $('.checkboxes').each(function(){
+                            this.checked = false;
+                         })
+                    }
+                });
+            });
+            </script>
           </div>
         </div>
       <div class="row">
-        <div class="col-md-4">
-          <label><input type="checkbox" name="checkall" id="checkall">Check all Calendars</label>
-          <script>
-          $(document).ready(function(){
-              $("#checkall").click(function(){
-                  if(this.checked){
-                      $('.checkboxes').each(function(){
-                          this.checked = true;
-                      })
-                  }
-                  else {
-                      $('.checkboxes').each(function(){
-                          this.checked = false;
-                       })
-                  }
-              });
-          });
-          </script>
-        </div>
-      </div>
-  <div class="row">
-      <button type=submit name="calchoose">Show Freetimes</button>
-  </div>
-  </form>
-  <!-- insert button if it is determined user is owner of some created meetings -->
-  {% if g.isowner == True %}
-    <form id="listmeetings" method="POST" action="/meetings">
-      <div class="row">
-        <button type=submit name="showmeetings">List Your Proposed Meetings</button>
-        {% for cal in g.ownedcals %} 
-          <input type="hidden" name="calsinfo" value="{{cal.id}},{{cal.summary}}">
-        {% endfor %}
-      </div> 
-   </form>
-  {% endif %}
-  <!-- insert button if determined user is has invites to meetings pending -->
-  {% if g.isinvited == True %}
-    <form id="listinvited" method="POST" action="/invites">
-      <div class="row">
-        <button type=submit name="showinvited">List Meetings Invited To</button>
-        {% for cal in g.ownedcals %}
-          <input type="hidden" name="calsinfo" value="{{cal.id}},{{cal.summary}}">
-        {% endfor %}
+        <button type=submit name="calchoose">Show Freetimes</button>
       </div>
     </form>
   {% endif %}
 {% endif %}
-
 
 <!-- flash flask messages for errors/notifications -->
 {% with messages = get_flashed_messages() %}
@@ -199,11 +213,11 @@
 
 <!-- show meeting entry field -->
 {% if g.date is defined %}
-  <h2>Enter Meeting Info:</h2><br />
+<div class="row">
+<div class="col-md-9">  
+  <h2>Enter Meeting Info:</h2>
   <form id="createmeeting" method="POST" action="/create">
     Select Calender to set as Owner of Event:<br />
-    <div class="row">
-    <div class="col-md-2">
     {% for calid, calinfo in session.selected.items() %}
         {% if calinfo[1] == "owner" %}
               <input type="radio" name="eventowner" value="{{calid}},{{calinfo[0]}}">
@@ -211,24 +225,50 @@
                 <br />
         {% endif %}
     {% endfor %}
-    </div>
-    </div>
     <div class="row">
+      <div class="col-md-3">
+        Date:
+      </div>
+      <div class="col-md-9">
         <input type=date name="date" value="{{ g.date }}">
-      </label>
-      From:
-      <input type="time" name="timestart" value="{{ g.start | fmttime }}">
-      To:
-      <input type="time" name="timeend" value="{{ g.end | fmttime }}">
+        From:
+        <input type="time" name="timestart" value="{{ g.start | fmttime }}">
+        To:
+        <input type="time" name="timeend" value="{{ g.end | fmttime }}">
+      </div>
     </div>
     <div class="row">
-      Event Title:<textarea name="title" id="title" rows="1" style="width: 30%;"></textarea>
+      <div class="col-md-3">
+        Event Title:
+      </div>
+      <div class="col-md-9">
+        <textarea name="title" id="title" rows="1" style="width: 100%;"></textarea>
+      </div>
     </div>
     <div class="row">
-      Description:<textarea name="description" id="desc" rows="10" style="width: 40%;"></textarea>
+      <div class="col-md-3">
+        Description:
+      </div>
+      <div class="col-md-9">
+        <textarea name="description" id="desc" rows="10" style="width: 100%;"></textarea>
+      </div>
     </div>
     <input type="submit" name="meetsubmit" value="Subit Meeting Request">
   </form>
+</div>
+<div class="col">
+  <div class="row">
+    <h3>Invited Calendars:</h3>
+  </div>
+  {% for calid, calinfo in session.selected.items() %}
+    {% if calinfo[1] != "owner" %}
+      <div class="row">
+        {{ calinfo[0] }}
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+</div>
 {% endif %}
 
   </div>  <!-- container (for bootstrap) -->

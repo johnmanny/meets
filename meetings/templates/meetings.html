@@ -40,6 +40,7 @@
             <p class="text-center" style="border-style: solid;">{{ meeting['title'] }}</p>
             <p class="text-center">Owned By Calendar: {{ meeting['ownersummary'] }}</p>
             <p class="text-center">{{meeting.start | fmtdate }}      {{ meeting.start | fmtfreetime }} - {{ meeting.end | fmtfreetime }}</p>
+            <p class="text-center">Status: {{meeting.status}}</p>
           {% for invitee in meeting['invitees'] %}
             <div class="row">
               <div class="col-md">
