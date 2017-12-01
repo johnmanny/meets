@@ -1,5 +1,9 @@
 # proj10-meetings
-Setting up meetings for users of freetimes
+Setting up meetings for between google calendar users
+
+## Usage:
+
+
 
 ## Description:
 

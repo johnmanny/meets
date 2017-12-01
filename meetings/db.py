@@ -61,30 +61,67 @@ def getMeetings():
         records.append(record)
     return records
 
-# get list of calendar owners
-def getOwners(records):
-    
+# get list of meeting owners
+def getOwners():
+    records = getMeetings()
     ownerList = []
     for meeting in records:
         ownerList.append(meeting['owner'])
     return ownerList
 
+# get list of meeting invitiees
+def getInvitees():
+    records = getMeetings()
+    inviteeList = []
+    for meeting in records:
+        for invitee in meeting['invitees']:
+            inviteeList.append(invitee)
+    return inviteeList
+
 # to implement flask variable used to check if should put 'list' button in template 
-def checkIsOwner(ownerlist, calendardict):
-    
-    for calendar in calendardict:
-        if calendar['accessrole'] == 'owner' and calendar['id'] in ownerlist:
+def checkIsOwner(calendars):
+    ownerlist = getOwners()
+    for calendar in calendars:
+        #print('NEW CALENDAR: ', calendar)
+        #print('------------------------------')
+        if calendar['id'] in ownerlist:
             return True
 
     return False
 
-# separate new meetinglist based on ownership of meetings
-def getOwnedMeetings(meetinglist, caldict):
-    newmeetinglist = []
-    for meeting in meetinglist:
-        for cal, sumAndRole in caldict.items():
-            if cal == meeting['owner'] and sumAndRole[1] == 'owner':
-                newmeetinglist.append(meeting)
-    print('NEW MEETING LIST: ', newmeetinglist)
-    return newmeetinglist
+# check if any owned calendar is invitee to meeting
+def checkIsInvited(calendars):
+    invitees = getInvitees()
+    for cal in calendars:
+        for invitee in invitees:
+            if invitee['id'] == cal['id']:
+                return True
 
+    return False
+
+
+# separate new meetinglist based on ownership of meetings
+def getOwnedMeetings(ownedcals):
+    meetinglist = getMeetings()
+    ownedmeetings = []
+    for meeting in meetinglist:
+        if meeting['owner'] in ownedcals:
+           ownedmeetings.append(meeting)
+    
+    return ownedmeetings
+
+
+#separate meetinglist based on invitee status of meetings
+def getInvitedMeetings(ownedcals):
+    records = getMeetings()
+    invitedmeetings = []
+    for meeting in records:
+        meetingappended = False
+        for invitee in meeting['invitees']:
+            if invitee['id'] in ownedcals and meetingappended == False:
+                invitedmeetings.append(meeting)
+                meetingappended = True
+                print('----------------------------------------')
+                print('INVITED MEETINGS DICT PER LOOP')
+                print(invitedmeetings)
+    return invitedmeetings

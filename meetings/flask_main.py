@@ -72,13 +72,21 @@ def choose():
     app.logger.debug("Returned from get_gcal_service")
     flask.g.calendars = list_calendars(gcal_service)
     
-    # get list of owners from database for button check of created invites
-    meetings = db.getMeetings()
-    ownerlist = db.getOwners(meetings)
-
-    # to check if should put 'list' button in template
-    flask.g.isowner = db.checkIsOwner(ownerlist, flask.g.calendars)
-
+    # get meetings from db
+    #meetings = db.getMeetings()
+    # get list of meeting owners
+    #ownerlist = db.getOwners(meetings)
+    
+    # get list of cals that are owned by user
+    flask.g.ownedcals = getOwnedCals(flask.g.calendars)
+    
+    # to check if user is owner of any created meetings
+    flask.g.isowner = db.checkIsOwner(flask.g.ownedcals)
+    
+    # to check if should put 'list invited meetings' button in template
+    flask.g.isinvited = db.checkIsInvited(flask.g.ownedcals)
+        
+    
     # request method is post and button pressed is to choose calendars
     if request.method == 'POST' and 'calchoose' in request.form:
         calendars = request.form.getlist('calendar')
@@ -87,9 +95,10 @@ def choose():
             return render_template('index.html')
 
         # get selected cals
-        flask.session['selected'] = getCalsFromHTML(calendars)
+        flask.session['selected'] = getSelectedCals(calendars)
         # get selected cal summaries and ids
         calsummaries, calendarids = getIdsAndSums(flask.session['selected'])
+        
         # get list of events
         events = getEvents(calendarids, calsummaries, credentials, gcal_service)
 
@@ -122,12 +131,15 @@ def choose():
 # create record of new event
 @app.route("/create", methods=['POST'])
 def create():
+    if 'eventowner' not in request.form:
+        flask.flash('no meeting owner chosen! meeting invitation not created.')
+        return flask.redirect(flask.url_for("choose"))
+    owner = request.form['eventowner']
     starttime = request.form['timestart']
     endtime = request.form['timeend']
     title = request.form['title']
     date = request.form['date']
     desc = request.form['description']
-    owner = request.form['eventowner']
     ownerparts= owner.split(',')
     invitees = []
      
@@ -151,27 +163,43 @@ def create():
  
     return flask.redirect(flask.url_for("choose"))
 
+"""
 ###
 # route for verification
 @app.route("/verify/<key>")
-def verify(key): pass
+def verify(key):
+    #print ('PRINTING URL PASSED:')
+    #print (key)
+    #print (url_for('verify', key=key))
+    #print ('-----------------------------------------')
+    meetings = db.getMeetings()
+"""    
 
 #####
 # display meetings proposed by owner of meetings
 @app.route("/meetings", methods=['POST'])
 def meetings():
     app.logger.debug("Entering meetings route")
-    # get calendar list data from HTML form
-    calinfo = request.form.getlist('calinfo')
-    sumAndRoleById = getCalsFromHTML(calinfo)
-    meetinglist = db.getMeetings()
-    flask.g.meetings = db.getOwnedMeetings(meetinglist, sumAndRoleById)
-    for meeting in flask.g.meetings:
-        for invitees in meeting['invitees']:
-              print ('PRINTING URL:')
-              print (url_for('verify', key=invitees['id']))
-              print ('-----------------------------------------')
+    
+    # get owned calendars from HTML form
+    calsinfo = request.form.getlist('calsinfo')
+    flask.g.ownedcals = getCalsFromHTML(calsinfo)
+    flask.g.ownedmeetings = db.getOwnedMeetings(flask.g.ownedcals)
+
+    app.logger.debug("Leaving meetings route")
     return render_template('meetings.html')
+
+@app.route("/invites", methods=['POST'])
+def invites():
+    app.logger.debug("entering invited route")
+
+    # get owned calendars data from HTML form
+    calsinfo = request.form.getlist('calsinfo')
+    flask.g.ownedcals = getCalsFromHTML(calsinfo)
+    flask.g.ownedinvites = db.getInvitedMeetings(flask.g.ownedcals)
+
+    app.logger.debug("leaving invited route")
+    return render_template('invites.html')
 
 ##################################################
 # Get events, to get events from calendars chosen in template
@@ -217,16 +245,26 @@ def getEvents(calid, calsum, credentials, service):
     return eventsbycalendar
 
 ##
-# create dict of selected cals for storing in session 
+# create dict of owned cals from HTML
 def getCalsFromHTML(calendars):
+    
+    calsdict = {} 
+    for cal in calendars:
+       calparts = []
+       calparts = cal.split(',')
+       calsdict[calparts[0]] = calparts[1]
+
+    return calsdict
+##
+# create dict of selected cals for storing in session 
+def getSelectedCals(calendars):
     ##
     # Calsdict layout: 
-    # calsdict = {'longcalendarid': ['calendarsummary', 'owner/reader/etc'],
-    #             'longcalid2': ['calsum2', 'owner2/reader2/etc],
+    # calsdict = {'longcalendarid':'calendarsummary',
+    #             'longcalid2': 'calsum2',
     #             ... 
     #            } 
     calsdict = {} 
-    calinfo = []
     for cal in calendars:
        calparts = []
        calinfo = []
@@ -251,6 +289,16 @@ def getIdsAndSums(calsdict):
     app.logger.debug(calsums)
     app.logger.debug(calids)
     return calsums, calids
+
+##
+# get owned calendars from calendarlist
+def getOwnedCals(cals):
+    newcals = []
+    for cal in cals:
+        if cal['accessrole'] == 'owner':
+            newcals.append(cal)
+
+    return newcals
 
 ###
 # google credential and service object functions

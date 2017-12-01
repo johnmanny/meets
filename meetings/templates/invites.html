@@ -1,6 +1,6 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html lang="en"> <head>
-<title>Show Meetings</title>
+<title>Show invites</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"/>
@@ -20,8 +20,8 @@
 <body>
 
 <div class="container">
-<h1 class="text-center">Meetings You've Organized</h1>
-<p class="text-center"> Displays the meetings organized by you!</p><br />
+<h1 class="text-center">Your Meeting Invites</h1>
+<p class="text-center"> Displays the meetings you've been invited to!</p><br />
 
 {% with messages = get_flashed_messages() %}
   {% if messages %}
@@ -35,20 +35,22 @@
 
 <!-- outputting meetings which the user is an owner of -->
     <div class="row">
-      {% for meeting in g.ownedmeetings %}
+      {% for meeting in g.ownedinvites %}
         <div class="col-md-4" style="border-style: solid">
             <p class="text-center" style="border-style: solid;">{{ meeting['title'] }}</p>
             <p class="text-center">Owned By Calendar: {{ meeting['ownersummary'] }}</p>
             <p class="text-center">{{meeting.start | fmtdate }}      {{ meeting.start | fmtfreetime }} - {{ meeting.end | fmtfreetime }}</p>
           {% for invitee in meeting['invitees'] %}
-            <div class="row">
-              <div class="col-md">
-                {{invitee['summary']}}
+            {% if invitee['id'] in g.ownedcals %}
+              <div class="row">
+                <div class="col-md">
+                  (Your Calendar) {{invitee['summary']}}
+                </div>
+                <div class="col-md-auto">
+                  {{invitee['status']}}
+                </div>
               </div>
-              <div class="col-md-auto">
-                {{invitee['status']}}
-              </div>
-            </div>
+            {% endif %}
           {% endfor %}
         </div>
       {% endfor %}

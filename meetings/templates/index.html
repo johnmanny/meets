@@ -132,17 +132,30 @@
       <button type=submit name="calchoose">Show Freetimes</button>
   </div>
   </form>
+  <!-- insert button if it is determined user is owner of some created meetings -->
   {% if g.isowner == True %}
     <form id="listmeetings" method="POST" action="/meetings">
       <div class="row">
         <button type=submit name="showmeetings">List Your Proposed Meetings</button>
-        {% for cal in g.calendars %} 
-          <input type="hidden" name="calinfo" value="{{cal.id}},{{cal.summary}},{{cal.accessrole}}">
+        {% for cal in g.ownedcals %} 
+          <input type="hidden" name="calsinfo" value="{{cal.id}},{{cal.summary}}">
         {% endfor %}
       </div> 
    </form>
   {% endif %}
+  <!-- insert button if determined user is has invites to meetings pending -->
+  {% if g.isinvited == True %}
+    <form id="listinvited" method="POST" action="/invites">
+      <div class="row">
+        <button type=submit name="showinvited">List Meetings Invited To</button>
+        {% for cal in g.ownedcals %}
+          <input type="hidden" name="calsinfo" value="{{cal.id}},{{cal.summary}}">
+        {% endfor %}
+      </div>
+    </form>
+  {% endif %}
 {% endif %}
+
 
 <!-- flash flask messages for errors/notifications -->
 {% with messages = get_flashed_messages() %}
