@@ -4,8 +4,8 @@ sources: Heavy reference from starter code, previous assignments
 description: file for database functions to be used by flask_main
 """
 
-#import pymongo
 from pymongo import MongoClient
+from bson.objectid import ObjectId
 import arrow
 
 #for config variables
@@ -52,12 +52,23 @@ def removefromDB(datetime):
     memodate = arrow.get(datetime).naive
     collection.delete_one({ "date": memodate})
 
-#func to return list of memos
+# modify status of invitee to accepted or rejected
+def modifyStatus(idsDict, changeto):
+    """
+    # idsDict : { 'inviteID': 'calendarid', 'meetID': 'objID }
+    collection.find_one_and_update( {'_id': ObjectId(idsDict['meetID']) },
+                           {'invitees': { idsDict['inviteID'] :
+    """
+    record = collection.find_one({ '_id' : ObjectId(idsDict['meetID']) })
+    for invitee in record['invitees']:
+        if invitee['id'] == idsDict['inviteID']:
+            invitee['status'] = changeto
+    collection.save(record)
+
+# func to return list of meetings
 def getMeetings():
     records = []
-
     for record in collection.find({ "type": "meeting" }).sort('start'):
-        del record['_id']
         records.append(record)
     return records
 
@@ -82,8 +93,6 @@ def getInvitees():
 def checkIsOwner(calendars):
     ownerlist = getOwners()
     for calendar in calendars:
-        #print('NEW CALENDAR: ', calendar)
-        #print('------------------------------')
         if calendar['id'] in ownerlist:
             return True
 
@@ -121,7 +130,4 @@ def getInvitedMeetings(ownedcals):
             if invitee['id'] in ownedcals and meetingappended == False:
                 invitedmeetings.append(meeting)
                 meetingappended = True
-                print('----------------------------------------')
-                print('INVITED MEETINGS DICT PER LOOP')
-                print(invitedmeetings)
     return invitedmeetings

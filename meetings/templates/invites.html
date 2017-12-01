@@ -36,7 +36,7 @@
 <!-- outputting meetings which the user is an owner of -->
     <div class="row">
       {% for meeting in g.ownedinvites %}
-        <div class="col-md-4" style="border-style: solid">
+        <div class="col-md-6" style="border-style: solid">
             <p class="text-center" style="border-style: solid;">{{ meeting['title'] }}</p>
             <p class="text-center">Owned By Calendar: {{ meeting['ownersummary'] }}</p>
             <p class="text-center">{{meeting.start | fmtdate }}      {{ meeting.start | fmtfreetime }} - {{ meeting.end | fmtfreetime }}</p>
@@ -46,6 +46,24 @@
                 <div class="col-md">
                   (Your Calendar) {{invitee['summary']}}
                 </div>
+                {% if invitee['status'] == "pending" %}
+                  <form id="response" method="POST" action="/reject">
+                    <div class="col-md">
+                      <button type=submit class="btn btn-primary btn-sm" name="reject"
+                              value="{{invitee['id']}},{{meeting['_id']}}">
+                        reject
+                      </button>
+                    </div>
+                  </form>
+                  <form id="response" method="POST" action="/accept">
+                    <div class="col-md">
+                      <button type=submit class="btn btn-primary btn-sm" name="accept"
+                              value="{{invitee['id']}},{{meeting['_id']}}">
+                        accept
+                      </button>
+                    </div>
+                  </form>
+                {% endif %}
                 <div class="col-md-auto">
                   {{invitee['status']}}
                 </div>
@@ -53,9 +71,11 @@
             {% endif %}
           {% endfor %}
         </div>
+        {% if loop.index is divisibleby 2 %}
+          </div><br /><div class="row">
+        {% endif %}
       {% endfor %}
     </div>
-
 
 
   </div>  <!-- container (for bootstrap) -->

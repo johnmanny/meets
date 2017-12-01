@@ -43,10 +43,10 @@ SCOPES = 'https://www.googleapis.com/auth/calendar.readonly'
 CLIENT_SECRET_FILE = CONFIG.GOOGLE_KEY_FILE  ## You'll need this
 APPLICATION_NAME = 'MeetMe class project'
 
-#############################
-#  Pages (routed from URLs)
-#############################
-
+"""
+###############################  Pages (routed from URLs)
+"""
+#########
 @app.route("/")
 @app.route("/index")
 def index():
@@ -55,7 +55,7 @@ def index():
     init_session_values()
   return render_template('index.html')
 
-#####
+#########
 # huge choose route that deals constantly with valid credentials
 #   and auth routing. all input to webpage goes through here and
 #   if request method is post, grab eventlist.
@@ -85,7 +85,6 @@ def choose():
     
     # to check if should put 'list invited meetings' button in template
     flask.g.isinvited = db.checkIsInvited(flask.g.ownedcals)
-        
     
     # request method is post and button pressed is to choose calendars
     if request.method == 'POST' and 'calchoose' in request.form:
@@ -115,7 +114,6 @@ def choose():
         flask.g.free = agenda.getFreeTimes(rangedAgenda)
     # request method is post and button pressed is to choose freetime
     elif request.method == 'POST' and 'ftchoose' in request.form:
-        print('&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&')
         if 'freetimechosen' not in request.form:
             flask.flash("no freetime chosen!")
             return render_template('index.html')
@@ -127,7 +125,7 @@ def choose():
     
     return render_template('index.html')
 
-###
+#########
 # create record of new event
 @app.route("/create", methods=['POST'])
 def create():
@@ -163,86 +161,70 @@ def create():
  
     return flask.redirect(flask.url_for("choose"))
 
-"""
-###
-# route for verification
-@app.route("/verify/<key>")
-def verify(key):
-    #print ('PRINTING URL PASSED:')
-    #print (key)
-    #print (url_for('verify', key=key))
-    #print ('-----------------------------------------')
-    meetings = db.getMeetings()
-"""    
-
-#####
-# display meetings proposed by owner of meetings
+########
+# display meeting info as person who setup the meeting
 @app.route("/meetings", methods=['POST'])
 def meetings():
     app.logger.debug("Entering meetings route")
     
-    # get owned calendars from HTML form
-    calsinfo = request.form.getlist('calsinfo')
-    flask.g.ownedcals = getCalsFromHTML(calsinfo)
+    # in case of redirect
+    if 'calsinfo' not in request.form:
+        flask.g.ownedcals = flask.session['ownedcals']
+    else:
+        calsinfo = request.form.getlist('calsinfo')
+        flask.g.ownedcals = getCalsFromHTML(calsinfo)
+        flask.session['ownedcals'] = flask.g.ownedcals
     flask.g.ownedmeetings = db.getOwnedMeetings(flask.g.ownedcals)
-
     app.logger.debug("Leaving meetings route")
     return render_template('meetings.html')
 
-@app.route("/invites", methods=['POST'])
+########
+# display meeting invitations as invitee (can only see owned invitations)
+@app.route("/invites", methods=['POST', 'GET'])
 def invites():
     app.logger.debug("entering invited route")
 
-    # get owned calendars data from HTML form
-    calsinfo = request.form.getlist('calsinfo')
-    flask.g.ownedcals = getCalsFromHTML(calsinfo)
+    # in case of redirect
+    if 'calsinfo' not in request.form:
+        flask.g.ownedcals = flask.session['ownedcals']
+    else:
+        calsinfo = request.form.getlist('calsinfo')
+        flask.g.ownedcals = getCalsFromHTML(calsinfo)
+        flask.session['ownedcals'] = flask.g.ownedcals
     flask.g.ownedinvites = db.getInvitedMeetings(flask.g.ownedcals)
 
     app.logger.debug("leaving invited route")
     return render_template('invites.html')
 
-##################################################
-# Get events, to get events from calendars chosen in template
-###
-def getEvents(calid, calsum, credentials, service):
-    app.logger.debug("Entering getEvents")
-    eventsbycalendar = {}
-    for count, ids in enumerate(calid):
-        events = service.events().list(calendarId=ids,
-                                       singleEvents=True,
-                                       orderBy='startTime',
-                                       timeMin=flask.session['begin_date'],
-                                       timeMax=flask.session['end_date']).execute()
-        eventclasslist = []
-        for event in events['items']:
-            if 'transparency' not in event:
-                starttime = event['start']
-                endtime = event['end']
-                
-                #to determine whether is all day event or if times specified
-                if 'dateTime' in starttime:
-                    start = starttime['dateTime']
-                    end = endtime['dateTime']
-                else:
-                    start = starttime['date']
-                    end = endtime['date']
-                if 'summary' in event:
-                    summ = event['summary']
-                else:
-                    summ = 'no title'
-                eventclass = times.timeblock(start, end, 'event', summ)
-                
-                # to split events if they include multiple days
-                passedEvent = agenda.fixEventTimes(eventclass)
-                try:
-                    for aEvent in passedEvent:
-                        eventclasslist.append(aEvent)
-                except TypeError:
-                    eventclasslist.append(passedEvent)
-        
-        eventsbycalendar[calsum[count]] = eventclasslist
-        app.logger.debug("Leaving getEvents")
-    return eventsbycalendar
+######
+# route to set invitation to accepted
+@app.route("/accept", methods=['POST'])
+def accept():
+    app.logger.debug("entering accept route")
+    idsDict = splitIds(request.form.get('accept'))
+    db.modifyStatus(idsDict, 'accepted')
+    app.logger.debug("exiting accept route")
+    return flask.redirect('invites')
+    
+#####
+# route to set invitation to rejected
+@app.route("/reject", methods=['POST'])
+def reject():
+    app.logger.debug("enter reject route")
+    idsDict = splitIds(request.form.get('reject'))
+    db.modifyStatus(idsDict, 'rejected')
+    app.logger.debug("exit reject route")
+    return flask.redirect('invites')
+
+
+####
+# split invitee id and meeting id
+def splitIds(ids):
+    parts = ids.split(',')
+    newIds = { 'inviteID': parts[0],
+               'meetID': parts[1]
+             }
+    return newIds
 
 ##
 # create dict of owned cals from HTML
@@ -255,14 +237,14 @@ def getCalsFromHTML(calendars):
        calsdict[calparts[0]] = calparts[1]
 
     return calsdict
+
 ##
 # create dict of selected cals for storing in session 
 def getSelectedCals(calendars):
     ##
     # Calsdict layout: 
     # calsdict = {'longcalendarid':'calendarsummary',
-    #             'longcalid2': 'calsum2',
-    #             ... 
+    #             'longcalid2': 'calsum2', ...
     #            } 
     calsdict = {} 
     for cal in calendars:
@@ -300,9 +282,9 @@ def getOwnedCals(cals):
 
     return newcals
 
-###
-# google credential and service object functions
-###
+"""
+###################### google credential and service object functions
+"""
 
 #checks for valid credentials
 def valid_credentials():
@@ -448,12 +430,53 @@ def next_day(isotext):
     as_arrow = arrow.get(isotext)
     return as_arrow.replace(days=+1).isoformat()
 
-####
-#
-#  Functions (NOT pages) that return some information
-#
-####
-  
+"""
+###################  Functions (NOT pages) that return some information
+"""
+#######
+# Get events, to get events from calendars chosen in template
+def getEvents(calid, calsum, credentials, service):
+    app.logger.debug("Entering getEvents")
+    eventsbycalendar = {}
+    for count, ids in enumerate(calid):
+        events = service.events().list(calendarId=ids,
+                                       singleEvents=True,
+                                       orderBy='startTime',
+                                       timeMin=flask.session['begin_date'],
+                                       timeMax=flask.session['end_date']).execute()
+        eventclasslist = []
+        for event in events['items']:
+            if 'transparency' not in event:
+                starttime = event['start']
+                endtime = event['end']
+                
+                #to determine whether is all day event or if times specified
+                if 'dateTime' in starttime:
+                    start = starttime['dateTime']
+                    end = endtime['dateTime']
+                else:
+                    start = starttime['date']
+                    end = endtime['date']
+                if 'summary' in event:
+                    summ = event['summary']
+                else:
+                    summ = 'no title'
+                eventclass = times.timeblock(start, end, 'event', summ)
+                
+                # to split events if they include multiple days
+                passedEvent = agenda.fixEventTimes(eventclass)
+                try:
+                    for aEvent in passedEvent:
+                        eventclasslist.append(aEvent)
+                except TypeError:
+                    eventclasslist.append(passedEvent)
+        
+        eventsbycalendar[calsum[count]] = eventclasslist
+        app.logger.debug("Leaving getEvents")
+    return eventsbycalendar
+
+#####
+# determine a list of cals from list obtained from google  
 def list_calendars(service):
     app.logger.debug("Entering list_calendars")  
     calendar_list = service.calendarList().list().execute()["items"]
