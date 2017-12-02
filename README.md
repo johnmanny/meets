@@ -19,9 +19,9 @@ time of the meeting can be fine-tuned from the freetime that was initially chose
 ***Sources:*** Previous projects, class material, API documentation, example code,
 and other sources specifically listed in files.
 
-***Functionality:*** V1 Dev build is only guarenteed to work in -8 GMT.
-App developed utilizing multiple calendars owned between 2 or 3 accounts.
-Comparisons between calendars are made using the accessrole of the
+***Functionality:*** V1 Dev build is only designed to work with -8 GMT events
+and calendars. App developed utilizing multiple calendars owned between 2 
+or 3 accounts. Comparisons between calendars are made using the accessrole of the
 given calendar. So, when invitations are managed, the accessrole the 
 logged in account has (logged in through oauth2 system for google cals)
 is used to determine who (aka what calendar) owns the meeting that is 
