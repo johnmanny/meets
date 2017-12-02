@@ -2,15 +2,20 @@
 Setting up meetings for between google calendar users
 
 ## Usage:
-
-
+A user clicks to begin on the homescreen and specifies a date and time
+range to look for free times between selected calendars in a list of
+highlighted calendars that the user has. These calendars are not required 
+to be owned by the user (meaning they could be read-only calendars other
+people own). When a freetime is chosen, the user has the option to add emails
+to receive the meeting invitation built. In the meeting invitation, the date and 
+time of the meeting can be fine-tuned from the freetime that was initially chosen.
 
 ## Description:
 
 ***Revision Author:*** John Nemeth
 
-***Sources:*** Previous projects, class material, API documentation 
-and example code.
+***Sources:*** Previous projects, class material, API documentation, example code,
+and other sources specifically listed in files.
 
 ***Functionality:*** V1 Dev build is only guarenteed to work in -8 GMT.
 App developed utilizing multiple calendars owned between 2 or 3 accounts.
@@ -22,4 +27,8 @@ proposed. The owner of the event is the only one who can see each person
 (aka calendar) who was invited to the meeting. Invitees (aka calendars) 
 can only accept or reject the invitation to the meeting (it starts out pending).
 When the meeting is created, a record of it is stored on a mongoDB database.
-
+When all meeting invitations are accepted, the meeting status changes from
+'pending' to 'confirmed'. Users have the option to list recipients of emails
+in the meeting invitiation field. The email will be sent from the gmail connected
+to the authed user. All authorization of users and security is handled by google's
+services.

@@ -1,6 +1,7 @@
 """
 author: John Nemeth
-sources: Heavy reference from starter code, previous assignments
+sources: Heavy reference from starter code, previous assignments,
+         API documentation and example code.
 description: file for database functions to be used by flask_main
 """
 
