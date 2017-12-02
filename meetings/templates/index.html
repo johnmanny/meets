@@ -2,22 +2,13 @@
 <html lang="en"> <head>
 <title>Appointments</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"/>
-
 <link rel="stylesheet" type="text/css" href="/static/css/busy.css"/>
-
 <!-- jquery from a content distribution network; probably cached -->
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
-</script>
-
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script type="text/javascript" src="//cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-
 <script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
-
-<!-- style sheet -->
-<link rel="stylesheet" href="/static/css/busy.css"/>
 
 </head>
 <body>
@@ -25,6 +16,30 @@
 <div class="container">
 <h1 class="text-center">Matching Meeting Times</h1>
 <p class="text-center"> Find a free time to setup a meeting between multiple people using thier google calendars!</p><br />
+
+{% if g.homepage is defined %}
+<div class="row">
+  <div class="col-md-3">
+    <h3>Welcome!</h3>
+  </div>
+  <div class="col-md">
+    <p>This app allows users to compare the busy times of their highlighted
+       google calendars (including ones shared with them) to find an available
+       meeting time between them and their calendar-mates. First, you choose a date
+       and time range. Second, you select calendars you'd like to compare between. 
+       Third, you select a free time block you'd like to migrate to the meeting
+       invitation tool (adjust the time in the tool). Fourth, you enter the meeting
+       information, possible email recipients, and viola!
+    </p>
+  </div>
+</div>
+<div class="row">
+  <form action="/setrange" method="post">
+    <input type="submit" value="Click To Get Started" />
+  </form>
+</div>
+{% endif %}
+
 
 <div class="row">
   <!-- insert button if it is determined user is owner of some created meetings -->
@@ -61,7 +76,8 @@
   {% endif %}
 </div>
 
-{% if g.date is not defined %}
+<!-- won't show up on /index page and /create meeting page -->
+{% if g.date is not defined and g.homepage is not defined%}
   <h2>Date/Time Range</h2>
     <div class="row">
       <form action="/setrange" method="post">
@@ -221,17 +237,19 @@
   <div class="col-md-9">  
     <h2>Enter Meeting Info:</h2>
       <p class="text-center">-Notes-<br/></p>
-      <p> 1. Pressing space enters an email under "Enter Emails".<br/>
+      <p> 1. Pressing space enters an email under "Enter Emails."<br/>
           2. Emails are sent to recipients using the email of
              the logged in user -only- when they click submit meeting
              request.<br/>
-          3. Sending emails are optional<br/>
-          4. Meetings are 'owned' by the id of the selected 'owner' calendar
-             and stored in a mongoDB database.<br/>
-          5. The 'invitees' of a stored meeting invitation are the non-owned 
+          3. Sending emails is optional.<br/>
+          4. Meetings are 'owned' by the selected 'owner' calendar (under these notes)
+             and information about the meeting are stored on a database.<br/>
+          5. The 'invitees' of a stored meeting invitation are the users non-owned 
              calendars which were selected and are listed on the right.<br/>
           6. Email invitations contain a link to http://localhost:PORT as this
              build is technically in development.<br/>
+          7. While high information security standards is enforced with Gmail use by google 
+             (MIMEtext and base64 encoding), mongoDB has no such standards.
       </p> 
       Select Calender to set as Owner of Event:<br />
       {% for calid, calinfo in session.selected.items() %}

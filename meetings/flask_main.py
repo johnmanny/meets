@@ -57,6 +57,9 @@ APPLICATION_NAME = 'MeetMe class project'
 @app.route("/index")
 def index():
   app.logger.debug("Entering index")
+  
+  # to give users a welcome to app
+  flask.g.homepage = True
   if 'begin_date' not in flask.session:
     init_session_values()
   return render_template('index.html')
@@ -78,11 +81,6 @@ def choose():
     app.logger.debug("Returned from get_gcal_service")
     flask.g.calendars = list_calendars(gcal_service)
     
-    # get meetings from db
-    #meetings = db.getMeetings()
-    # get list of meeting owners
-    #ownerlist = db.getOwners(meetings)
-    
     # get list of cals that are owned by user
     flask.g.ownedcals = calfuncs.getOwnedCals(flask.g.calendars)
     
@@ -99,7 +97,7 @@ def choose():
             flask.flash('no calendars selected!')
             return render_template('index.html')
 
-        # get selected cals
+        # put selected cals in cookie for other routes
         flask.session['selected'] = calfuncs.getSelectedCals(calendars)
         # get selected cal summaries and ids
         calsummaries, calendarids = calfuncs.getIdsAndSums(flask.session['selected'])
@@ -168,7 +166,7 @@ def create():
         start = arrow.get(date + ' ' + starttime).replace(tzinfo=tz.tzlocal()).isoformat()
         end = arrow.get(date + ' ' + endtime).replace(tzinfo=tz.tzlocal()).isoformat() 
         db.enterinDB(title, desc, start, end, ownerparts[0], ownerparts[1], invitees)
-        flask.flash("event invite successfully created!")
+        flask.flash("meeting invitation(s) successfully created!")
     
     """
     ### email operations kept in create route because of google auth complexity ###
@@ -189,7 +187,7 @@ def create():
         for email in emails:
             message = gmailsend.createMessage(email, title, newdesc)
             gmailsend.sendMessage(gmailService, message)
-            flask.flash("email(s) successfully sent!")
+            flask.flash("email successfully sent!")
     else:
         flask.flash('no emails were specified to receive the invitation!')
     
@@ -331,6 +329,8 @@ def setrange():
     User chose a date range with the bootstrap daterange
     widget.
     """
+    if 'daterange' not in request.form:
+        return flask.redirect(flask.url_for("choose"))
     app.logger.debug("Entering setrange")  
     #flask.flash("Setrange gave us '{}'".format(
     #  request.form.get('daterange')))
