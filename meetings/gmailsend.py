@@ -8,6 +8,7 @@ import email.mime.text
 import base64
 import arrow
 
+# append additional information to description messaage
 def appendMsgToHeader(start, end, title, message, serverport):
     meetdate = arrow.get(start)
     meetdate = meetdate.format("ddd MM/DD")
@@ -20,40 +21,20 @@ def appendMsgToHeader(start, end, title, message, serverport):
     addresslink = '\n http://localhost:' + str(serverport) + ' (link is placeholder for V1 dev build)'
     newmessage = newmessage + appSignature + addresslink
     return newmessage
-    
 
+# create message with gmail requirements of MIME text and base64 encoding
 def createMessage(to, subject, message):
-  """Create a message for an email.
+  
+    message = email.mime.text.MIMEText(message)
+    message['to'] = to
+    message['from'] = "me"
+    message['subject'] = 'Meeting invitation: ' + subject
+    message = base64.urlsafe_b64encode(message.as_bytes())
+    message = message.decode()
+    return {'raw': message} 
 
-  Args:
-    sender: Email address of the sender.
-    to: Email address of the receiver.
-    subject: The subject of the email message.
-    message_text: The text of the email message.
-
-  Returns:
-    An object containing a base64url encoded email object.
-  """
-  message = email.mime.text.MIMEText(message)
-  message['to'] = to
-  message['from'] = "me"
-  message['subject'] = 'Meeting invitation: ' + subject
-  message = base64.urlsafe_b64encode(message.as_bytes())
-  message = message.decode()
-  return {'raw': message} 
-
+# send message with gmail service
 def sendMessage(service, message):
-  """Send an email message.
-
-  Args:
-    service: Authorized Gmail API service instance.
-    user_id: User's email address. The special value "me"
-    can be used to indicate the authenticated user.
-    message: Message to be sent.
-
-  Returns:
-    Sent Message.
-  """
   try:
     message = (service.users().messages().send(userId= "me", body=message)
                .execute())

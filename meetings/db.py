@@ -49,9 +49,14 @@ def enterinDB(title, desc, start, end, ownerid, ownersum, invitees):
     collection.insert_one(newmeeting)
 
 #func to remove from DB
-def removefromDB(datetime):
+def removefromDB(meetid):
     memodate = arrow.get(datetime).naive
     collection.delete_one({ "date": memodate})
+
+
+###########
+# meeting manipulation/accessing functions
+###########
 
 # check if meeting is confirmed (all invites approved)
 def checkMeetingConfirm(idsDict):
@@ -130,7 +135,7 @@ def getOwnedMeetings(ownedcals):
     return ownedmeetings
 
 
-#separate meetinglist based on invitee status of meetings
+# separate meetinglist based on invitee status of meetings
 def getInvitedMeetings(ownedcals):
     records = getMeetings()
     invitedmeetings = []

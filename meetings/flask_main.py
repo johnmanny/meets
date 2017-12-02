@@ -132,7 +132,7 @@ def choose():
     return render_template('index.html')
 
 #########
-# create record of new event
+# create record of new event and email it
 @app.route("/create", methods=['POST'])
 def create():
     app.logger.debug("Entering create route")
@@ -148,16 +148,11 @@ def create():
     desc = request.form['description']
     emails = request.form['emailinput']
     
-    # check if emails included
-    if emails:
-        # remove last comma
-        emails = emails.split(',')
-        emails = emails[0 : -1]
-    else:
-        flask.flash('no emails were specified to receive the invitation!')
-    
-    invitees = []
+    """
+    ### for entering invitation into database ###
+    """
     # place selected calendars into invitee list if isn't selected owner calendar
+    invitees = []
     for calid, items in flask.session['selected'].items():
         if items[1] != 'owner':
             cal = {}
@@ -165,6 +160,7 @@ def create():
             cal['status'] = 'pending'
             cal['summary'] = items[0]
             invitees.append(cal)
+    
     # error check for unfilled, required fields
     if not title or not desc or not starttime or not endtime or not date:
         flask.flash("one of 5 required fields left empty! (times, date, title, and description")
@@ -174,17 +170,29 @@ def create():
         db.enterinDB(title, desc, start, end, ownerparts[0], ownerparts[1], invitees)
         flask.flash("event invite successfully created!")
     
-    # send email
-    credentials = valid_credentials()
-    if not credentials:
-        app.logger.debug("Redirecting to authorization")
-        return flask.redirect(flask.url_for('oauth2callback'))
-    gmailService = get_gmail_service(credentials)
-    newdesc = gmailsend.appendMsgToHeader(start, end, title, desc, CONFIG.PORT)
-    for email in emails:
-        message = gmailsend.createMessage(email, title, newdesc)
-        gmailsend.sendMessage(gmailService, message)
-        flask.flash("emails successfully sent!")
+    """
+    ### email operations kept in create route because of google auth complexity ###
+    """
+    # check if emails list entered
+    if emails:
+        # remove last comma from input
+        emails = emails.split(',')
+        emails = emails[0 : -1]
+        credentials = valid_credentials()
+        if not credentials:
+            app.logger.debug("Redirecting to authorization")
+            return flask.redirect(flask.url_for('oauth2callback'))
+        # create gmail service
+        gmailService = get_gmail_service(credentials)
+        newdesc = gmailsend.appendMsgToHeader(start, end, title, desc, CONFIG.PORT)
+        # send an email for every email entered
+        for email in emails:
+            message = gmailsend.createMessage(email, title, newdesc)
+            gmailsend.sendMessage(gmailService, message)
+            flask.flash("email(s) successfully sent!")
+    else:
+        flask.flash('no emails were specified to receive the invitation!')
+    
     return flask.redirect(flask.url_for("choose"))
 
 ########
@@ -251,7 +259,7 @@ def reject():
 
 
 """
-############################################################## gmail credential
+###################### gmail service object
 """
 # retrieve the service object for google calendar
 def get_gmail_service(credentials):
@@ -262,8 +270,21 @@ def get_gmail_service(credentials):
   return service
 
 """
-############################################################# calendar credentials
+################### calendar service object
 """
+# retrieve the service object for google calendar
+def get_gcal_service(credentials):
+  app.logger.debug("Entering get_gcal_service")
+  http_auth = credentials.authorize(httplib2.Http())
+  service = discovery.build('calendar', 'v3', http=http_auth)
+  app.logger.debug("Returning service")
+  return service
+
+
+"""
+################### auth procedures
+"""
+
 #checks for valid credentials
 def valid_credentials():
    
@@ -277,14 +298,6 @@ def valid_credentials():
         credentials.access_token_expired):
       return None
     return credentials
-
-# retrieve the service object for google calendar
-def get_gcal_service(credentials):
-  app.logger.debug("Entering get_gcal_service")
-  http_auth = credentials.authorize(httplib2.Http())
-  service = discovery.build('calendar', 'v3', http=http_auth)
-  app.logger.debug("Returning service")
-  return service
 
 # oauth2callback directs to google for valid credentials
 @app.route('/oauth2callback')
@@ -331,7 +344,6 @@ def setrange():
       flask.session['begin_date'], flask.session['end_date']))
     end = arrow.get(flask.session['end_date'])
     end = end.shift(minutes=-1)
-    #print('END DATE CEILING: ', end.ceil('day').isoformat())
     flask.session['end_date'] = end.ceil('day').isoformat()
     flask.session["begin_time"] = interpret_time(request.form.get('timestart'))
     flask.session["end_time"] = interpret_time(request.form.get('timeend'))
