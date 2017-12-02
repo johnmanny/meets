@@ -1,5 +1,7 @@
 # proj10-meetings
-Setting up meetings for between google calendar users
+Setting up meetings by analyzing the busy times of google calendars
+and producing freetime slots which users can email directly to potential
+attendees.
 
 ## Usage:
 A user clicks to begin on the homescreen and specifies a date and time
