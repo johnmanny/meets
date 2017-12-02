@@ -29,6 +29,7 @@ import times
 import agenda
 import db
 import calfuncs
+import gmailsend
 
 ###
 # Globals
@@ -134,18 +135,28 @@ def choose():
 # create record of new event
 @app.route("/create", methods=['POST'])
 def create():
+    app.logger.debug("Entering create route")
     if 'eventowner' not in request.form:
         flask.flash('no meeting owner chosen! meeting invitation not created.')
         return flask.redirect(flask.url_for("choose"))
     owner = request.form['eventowner']
+    ownerparts= owner.split(',')
     starttime = request.form['timestart']
     endtime = request.form['timeend']
     title = request.form['title']
     date = request.form['date']
     desc = request.form['description']
-    ownerparts= owner.split(',')
+    emails = request.form['emailinput']
+    
+    # check if emails included
+    if emails:
+        # remove last comma
+        emails = emails.split(',')
+        emails = emails[0 : -1]
+    else:
+        flask.flash('no emails were specified to receive the invitation!')
+    
     invitees = []
-     
     # place selected calendars into invitee list if isn't selected owner calendar
     for calid, items in flask.session['selected'].items():
         if items[1] != 'owner':
@@ -154,7 +165,6 @@ def create():
             cal['status'] = 'pending'
             cal['summary'] = items[0]
             invitees.append(cal)
-
     # error check for unfilled, required fields
     if not title or not desc or not starttime or not endtime or not date:
         flask.flash("one of 5 required fields left empty! (times, date, title, and description")
@@ -164,14 +174,17 @@ def create():
         db.enterinDB(title, desc, start, end, ownerparts[0], ownerparts[1], invitees)
         flask.flash("event invite successfully created!")
     
- 
+    # send email
     credentials = valid_credentials()
     if not credentials:
         app.logger.debug("Redirecting to authorization")
         return flask.redirect(flask.url_for('oauth2callback'))
-    result = get_gmail_service(credentials)
-    send_message(result)
-
+    gmailService = get_gmail_service(credentials)
+    newdesc = gmailsend.appendMsgToHeader(start, end, title, desc, CONFIG.PORT)
+    for email in emails:
+        message = gmailsend.createMessage(email, title, newdesc)
+        gmailsend.sendMessage(gmailService, message)
+        flask.flash("emails successfully sent!")
     return flask.redirect(flask.url_for("choose"))
 
 ########
@@ -232,12 +245,13 @@ def reject():
     idsDict = calfuncs.splitIds(request.form.get('reject'))
     # change relevant invite to 'rejected'
     db.modifyStatus(idsDict, 'rejected')
+    
     app.logger.debug("exit reject route")
     return flask.redirect('invites')
 
 
 """
-############################################## google credential and service object functions
+############################################################## gmail credential
 """
 # retrieve the service object for google calendar
 def get_gmail_service(credentials):
@@ -247,50 +261,9 @@ def get_gmail_service(credentials):
   app.logger.debug("Returning service")
   return service
 
-def create_message():
-  """Create a message for an email.
-
-  Args:
-    sender: Email address of the sender.
-    to: Email address of the receiver.
-    subject: The subject of the email message.
-    message_text: The text of the email message.
-
-  Returns:
-    An object containing a base64url encoded email object.
-  """
-  message_text = 'DUDE YOU WILL NEVER GUESS WUT HAPPENED'
-  message = email.mime.text.MIMEText(message_text)
-  message['to'] = 'oowea@yahoo.com'
-  message['from'] = 'ooowea@gmail.com'
-  message['subject'] = 'dudddddddddddddde'
-  message = base64.urlsafe_b64encode(message.as_bytes())
-  message = message.decode()
-  return {'raw': message} 
-
-def send_message(service):
-  """Send an email message.
-
-  Args:
-    service: Authorized Gmail API service instance.
-    user_id: User's email address. The special value "me"
-    can be used to indicate the authenticated user.
-    message: Message to be sent.
-
-  Returns:
-    Sent Message.
-  """
-  theemail = create_message()
-  try:
-    user_id = 'ooowea@gmail.com'
-    message = (service.users().messages().send(userId=user_id, body=theemail)
-               .execute())
-    print ('Message Id: %s' % message['id'])
-    return message
-  except httplib2.HttpLib2Error:
-    print ('An error occurred: %s' % error)
-
-########################################################################calendar ones
+"""
+############################################################# calendar credentials
+"""
 #checks for valid credentials
 def valid_credentials():
    

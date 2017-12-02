@@ -16,6 +16,9 @@
 <script type="text/javascript" src="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.js"></script>
 <link rel="stylesheet" type="text/css" href="//cdn.jsdelivr.net/bootstrap.daterangepicker/2/daterangepicker.css" />
 
+<!-- style sheet -->
+<link rel="stylesheet" href="/static/css/busy.css"/>
+
 </head>
 <body>
 
@@ -213,61 +216,138 @@
 
 <!-- show meeting entry field -->
 {% if g.date is defined %}
+    <form id="createmeeting" method="POST" action="/create">
 <div class="row">
-<div class="col-md-9">  
-  <h2>Enter Meeting Info:</h2>
-  <form id="createmeeting" method="POST" action="/create">
-    Select Calender to set as Owner of Event:<br />
-    {% for calid, calinfo in session.selected.items() %}
-        {% if calinfo[1] == "owner" %}
-              <input type="radio" name="eventowner" value="{{calid}},{{calinfo[0]}}">
-                {{ calinfo[0] }}
-                <br />
-        {% endif %}
-    {% endfor %}
-    <div class="row">
-      <div class="col-md-3">
-        Date:
-      </div>
-      <div class="col-md-9">
-        <input type=date name="date" value="{{ g.date }}">
-        From:
-        <input type="time" name="timestart" value="{{ g.start | fmttime }}">
-        To:
-        <input type="time" name="timeend" value="{{ g.end | fmttime }}">
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-md-3">
-        Event Title:
-      </div>
-      <div class="col-md-9">
-        <textarea name="title" id="title" rows="1" style="width: 100%;"></textarea>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-md-3">
-        Description:
-      </div>
-      <div class="col-md-9">
-        <textarea name="description" id="desc" rows="10" style="width: 100%;"></textarea>
-      </div>
-    </div>
-    <input type="submit" name="meetsubmit" value="Subit Meeting Request">
-  </form>
-</div>
-<div class="col">
-  <div class="row">
-    <h3>Invited Calendars:</h3>
-  </div>
-  {% for calid, calinfo in session.selected.items() %}
-    {% if calinfo[1] != "owner" %}
+  <div class="col-md-9">  
+    <h2>Enter Meeting Info:</h2>
+      <p class="text-center">-Notes-<br/></p>
+      <p> 1. Pressing space enters an email under "Enter Emails".<br/>
+          2. Emails are sent to recipients using the email of
+             the logged in user -only- when they click submit meeting
+             request.<br/>
+          3. Sending emails are optional<br/>
+          4. Meetings are 'owned' by the id of the selected 'owner' calendar
+             and stored in a mongoDB database.<br/>
+          5. The 'invitees' of a stored meeting invitation are the non-owned 
+             calendars which were selected and are listed on the right.<br/>
+          6. Email invitations contain a link to http://localhost:PORT as this
+             build is technically in development.<br/>
+      </p> 
+      Select Calender to set as Owner of Event:<br />
+      {% for calid, calinfo in session.selected.items() %}
+          {% if calinfo[1] == "owner" %}
+                <input type="radio" name="eventowner" value="{{calid}},{{calinfo[0]}}">
+                  {{ calinfo[0] }}
+                  <br />
+          {% endif %}
+      {% endfor %}
       <div class="row">
-        {{ calinfo[0] }}
+        <div class="col-md-4">
+          Date:
+        </div>
+        <div class="col-md-8">
+          <input type=date name="date" value="{{ g.date }}">
+          From:
+          <input type="time" name="timestart" value="{{ g.start | fmttime }}">
+          To:
+          <input type="time" name="timeend" value="{{ g.end | fmttime }}">
+        </div>
       </div>
-    {% endif %}
-  {% endfor %}
-</div>
+      <div class="row">
+        <div class="col-md-4">
+          Event Title:
+        </div>
+        <div class="col-md-8">
+          <textarea name="title" id="title" rows="1" style="width: 100%;"></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-4">
+          Description:
+        </div>
+        <div class="col-md-8">
+          <textarea name="description" id="desc" rows="10" style="width: 100%;"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="row">
+        <h3>Invited Calendars:</h3>
+      </div>
+      {% for calid, calinfo in session.selected.items() %}
+        {% if calinfo[1] != "owner" %}
+          <div class="row">
+            {{ calinfo[0] }}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <br />
+      <div class="row">
+        <h3>Enter Emails:</h3>
+      </div>
+      <div class="row">
+        <input type="text" name="emailinput" id="emailinput"/> 
+          <script>
+            $(document).ready(function(){
+                //email input code from:
+                //http://t2a.co/blog/index.php/multiple-value-input-field-with-jquery/
+                
+                // no pressing enter in forms of document
+                $(document).on("keypress", "form", function(event) { 
+                    return event.keyCode != 13;
+                });
+                (function( $ ){
+                    $.fn.multipleInput = function() {
+                        return this.each(function() {
+                            // list of email addresses as unordered list
+                            $list = $('<ul />');
+                            // input
+                            var $input = $('<input type="text" />').keyup(function(event) {
+                                if(event.which == 32 || event.which == 188) {
+                                    // key press is space or comma
+                                    var val = $(this).val().slice(0, -1); // remove space/comma from value
+                                    // append to list of emails with remove button
+                                    $list.append($('<li class="multipleInput-email"><span>' + val + '</span> -</li>')
+                                        .append($('<a href="#" class="multipleInput-close" title="Remove"> Remove </a>')
+                                        .click(function(e) {
+                                            $(this).parent().remove();
+                                            e.preventDefault();
+                                            })
+                                        )
+                                    );
+                                    $(this).attr('placeholder', '');
+                                    // empty input
+                                    $(this).val('');
+                                }
+                            });
+                            // container div
+                            var $container = $('<div class="multipleInput-container" />').click(function() {
+                                $input.focus();
+                            });
+                            // insert elements into DOM
+                            $container.append($list).append($input).insertAfter($(this));
+                            // add onsubmit handler to parent form to copy emails into original input as csv before submitting
+                            var $orig = $(this);
+                            $(this).closest('form').submit(function(e) {
+                                var emails = new Array();
+                                $('.multipleInput-email span').each(function() {
+                                    emails.push($(this).html());
+                                });
+                                emails.push($input.val());
+                                $orig.val(emails.join());
+                            });
+                            return $(this).hide();
+                        });
+                    };
+                })( jQuery );
+                $('#emailinput').multipleInput();
+            }); 
+          </script>
+        </div>
+      </div>
+    </div>
+    <input type="submit" name="meetsubmit" value="Submit Meeting Request">
+  </form>
 </div>
 {% endif %}
 
