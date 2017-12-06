@@ -1,7 +1,7 @@
 """
 Author: John Nemeth
 Sources: Class Material
-Description: implementation file for modifying 'agenda' lists 
+Description: implementation file for modifying 'timeblock' lists
 """
 
 import times

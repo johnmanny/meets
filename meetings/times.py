@@ -1,7 +1,7 @@
 """
 Author: John Nemeth
 Sources: Class Material
-Description: implementation file for functions used to manipulate agendas
+Description: implementation file for timeblock class
 """
 
 import arrow
