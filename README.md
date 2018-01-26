@@ -1,7 +1,7 @@
-# proj10-meetings
-Setting up meetings by analyzing the busy times of google calendars
+# Meets
+This project sets up meetings by analyzing the busy times of google calendars
 and producing freetime slots which users can email directly to potential
-attendees.
+attendees. 
 
 ## Usage:
 A user clicks to begin on the homescreen and specifies a date and time
@@ -14,13 +14,13 @@ time of the meeting can be fine-tuned from the freetime that was initially chose
 
 ## Description:
 
-***Revision Author:*** John Nemeth
+***Author:*** John Nemeth
 
 ***Sources:*** Previous projects, class material, API documentation, example code,
 and other sources specifically listed in files.
 
 ***Functionality:*** V1 Dev build is only designed to work with -8 GMT events
-and calendars. App developed utilizing multiple calendars owned between 2 
+and calendars(hence only one time sent in generated email). App developed utilizing multiple calendars owned between 2 
 or 3 accounts. Comparisons between calendars are made using the accessrole of the
 given calendar. So, when invitations are managed, the accessrole the 
 logged in account has (logged in through oauth2 system for google cals)
