@@ -1,7 +1,7 @@
 # Meets
 This project sets up meetings by analyzing the busy times of google calendars
 and producing freetime slots which users can email directly to potential
-attendees. 
+attendees. Intended for usage in -8 GMT.
 
 ## Usage:
 A user clicks to begin on the homescreen and specifies a date and time
@@ -16,8 +16,13 @@ time of the meeting can be fine-tuned from the freetime that was initially chose
 
 ***Author:*** John Nemeth
 
-***Sources:*** Previous projects, class material, API documentation, example code,
+***Sources:*** Previous projects, class material, API documentation,
 and other sources specifically listed in files.
+
+***Unoriginal Files:*** LICENSE is unmodified and from prior iterations of the project.
+config.py, and Makefile has minor modifications from a templage given in the class. flask_main.py heavily modified from
+template given in prior project. All other files are original (outside of API documentation examples and specific 
+sources listed in header of files)
 
 ***Functionality:*** V1 Dev build is only designed to work with -8 GMT events
 and calendars(hence only one time sent in generated email). App developed utilizing multiple calendars owned between 2 
@@ -33,4 +38,4 @@ When all meeting invitations are accepted, the meeting status changes from
 'pending' to 'confirmed'. Users have the option to list recipients of emails
 in the meeting invitiation field. The email will be sent from the gmail connected
 to the authed user. All authorization of users and security is handled by google's
-services.
+services and their requirements.
