@@ -46,8 +46,9 @@ app.logger.setLevel(logging.DEBUG)
 app.secret_key=CONFIG.SECRET_KEY
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly', 'https://www.googleapis.com/auth/gmail.send']
-CLIENT_SECRET_FILE = CONFIG.GOOGLE_KEY_FILE  ## You'll need this
-APPLICATION_NAME = 'MeetMe class project'
+# for google oauth2 credentials
+CLIENT_SECRET_FILE = CONFIG.GOOGLE_KEY_FILE
+APPLICATION_NAME = 'meets project'
 
 """
 ###############################  Pages (routed from URLs)
